@@ -1,0 +1,251 @@
+/* 공통 토큰 · 보드게임 파티 톤 */
+:root {
+  --wood-dark: #5c3317;
+  --wood-mid: #8b5a2b;
+  --wood-light: #c48a3a;
+  --felt: #1a6b3c;
+  --felt-deep: #0f4a28;
+  --cream: #fff6e0;
+  --ink: #1a1208;
+  --p1: #e6392e;
+  --p1-dark: #a81f18;
+  --p2: #2d6cdf;
+  --p2-dark: #1a4199;
+  --gold: #f0c040;
+  --gold-solid: #f0c040;
+  --chip-yellow: #ffd166;
+  --chip-teal: #06d6a0;
+  --border: 4px solid var(--ink);
+  --shadow: 6px 6px 0 var(--ink);
+  --radius: 14px;
+  --font-display: "Trebuchet MS", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-body: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--felt-deep);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+button,
+[role="button"] {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--gold-solid);
+  outline-offset: 3px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.screen {
+  min-height: 100vh;
+}
+
+/* 공통 HUD */
+.hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--cream);
+  border-bottom: var(--border);
+  font-weight: 800;
+}
+
+.hud-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.hud-player.p1 .tag {
+  background: var(--p1);
+  color: #fff;
+}
+
+.hud-player.p2 .tag {
+  background: var(--p2);
+  color: #fff;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.hud-center {
+  text-align: center;
+  flex: 1;
+}
+
+.hud-timer {
+  font-size: 1.4rem;
+  font-family: var(--font-display);
+}
+
+/* 오버레이: 카운트다운 / 결과 */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 20, 10, 0.55);
+  z-index: 20;
+  text-align: center;
+  padding: 24px;
+}
+
+.overlay.hidden {
+  display: none !important;
+}
+
+.countdown-num,
+.result-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 12vw, 6rem);
+  font-weight: 900;
+  color: var(--cream);
+  text-shadow: 4px 4px 0 var(--ink);
+  animation: pop-in 0.28s ease-out;
+}
+
+.result-sub {
+  margin-top: 8px;
+  font-size: 1.25rem;
+  color: var(--cream);
+  font-weight: 700;
+}
+
+.result-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  appearance: none;
+  border: var(--border);
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.btn-primary {
+  background: var(--gold-solid);
+}
+
+.btn-p1 {
+  background: var(--p1);
+  color: #fff;
+}
+
+.btn-p2 {
+  background: var(--p2);
+  color: #fff;
+}
+
+.btn-muted {
+  background: #ddd4c4;
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shake-soft {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+.shake {
+  animation: shake-soft 0.28s ease;
+}
+
+.mute-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: var(--border);
+  background: var(--cream);
+  box-shadow: var(--shadow);
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+@media (max-width: 700px) {
+  .btn {
+    padding: 12px 18px;
+    font-size: 1rem;
+  }
+}

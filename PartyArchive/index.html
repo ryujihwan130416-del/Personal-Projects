@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>파티 아카이브</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f0c040' stroke='%231a1208' stroke-width='3'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles/base.css" />
+  <link rel="stylesheet" href="styles/lobby.css" />
+  <link rel="stylesheet" href="styles/games.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 로비 -->
+    <section id="lobby" class="screen" aria-label="로비">
+      <div class="dice-deco dice-a" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="dice-deco dice-b" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <div class="lobby-inner">
+        <header class="lobby-header">
+          <h1 class="brand">파티 아카이브</h1>
+          <p class="tagline">한 키보드 · 두 사람 · 다섯 판의 짧은 승부</p>
+        </header>
+
+        <div class="panel" role="group" aria-labelledby="mode-title">
+          <h2 id="mode-title" class="panel-title">모드</h2>
+          <div class="mode-row">
+            <button type="button" class="seg-btn" data-mode="pvp" aria-pressed="true">사람 vs 사람</button>
+            <button type="button" class="seg-btn" data-mode="ai" aria-pressed="false">사람 vs AI</button>
+          </div>
+        </div>
+
+        <div id="difficulty-panel" class="panel disabled" role="group" aria-labelledby="diff-title">
+          <h2 id="diff-title" class="panel-title">AI 난이도</h2>
+          <div class="diff-row">
+            <button type="button" class="seg-btn" data-diff="easy" aria-pressed="false">쉬움</button>
+            <button type="button" class="seg-btn" data-diff="normal" aria-pressed="true">보통</button>
+            <button type="button" class="seg-btn" data-diff="hard" aria-pressed="false">어려움</button>
+          </div>
+        </div>
+
+        <div class="panel scoreboard" aria-live="polite">
+          <div>
+            <h2 class="panel-title">세션 승수</h2>
+            <div class="score-pills">
+              <div class="score-pill p1">
+                <span class="tag" style="background:var(--p1);color:#fff">P1</span>
+                <span id="score-p1" class="num">0</span>
+              </div>
+              <div class="score-pill p2">
+                <span class="tag" style="background:var(--p2);color:#fff" id="score-p2-label">P2</span>
+                <span id="score-p2" class="num">0</span>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-muted" id="btn-reset-score">점수 초기화</button>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title">조작 범례</h2>
+          <div class="legend">
+            <div>P1 주행동 <kbd>A</kbd> · 보조 <kbd>S</kbd></div>
+            <div>P2 주행동 <kbd>L</kbd> · 보조 <kbd>K</kbd></div>
+            <div>시작 <kbd>Space</kbd></div>
+            <div>로비 <kbd>Esc</kbd></div>
+          </div>
+        </div>
+
+        <h2 class="panel-title" style="color:var(--cream);text-shadow:2px 2px 0 var(--ink)">미니게임 고르기</h2>
+        <div class="game-grid" id="game-grid" role="list"></div>
+      </div>
+    </section>
+
+    <!-- 게임 셸 -->
+    <section id="game-screen" class="screen hidden" aria-label="게임">
+      <div id="game-root"></div>
+    </section>
+  </div>
+
+  <button type="button" class="mute-fab" id="btn-mute" aria-pressed="false" title="음소거">소리 ON</button>
+
+  <!-- file:// 호환: 모듈 없이 순서 로드 -->
+  <script src="js/input.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/games/tug.js"></script>
+  <script src="js/games/draw.js"></script>
+  <script src="js/games/potato.js"></script>
+  <script src="js/games/stopbar.js"></script>
+  <script src="js/games/moles.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
