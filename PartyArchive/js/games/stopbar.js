@@ -147,13 +147,9 @@
         ai = null;
       }
       if (round >= ROUNDS) {
-        setTimeout(function () {
-          if (!destroyed) endMatch();
-        }, 700);
+        later(endMatch, 700);
       } else {
-        setTimeout(function () {
-          if (!destroyed) startRound();
-        }, 900);
+        later(startRound, 900);
       }
     }
 
@@ -296,6 +292,8 @@
       destroy: function () {
         destroyed = true;
         running = false;
+        for (var i = 0; i < timers.length; i++) clearTimeout(timers[i]);
+        timers = [];
         if (raf) cancelAnimationFrame(raf);
         if (input) input.destroy();
         if (ai) ai.destroy();
