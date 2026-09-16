@@ -199,6 +199,7 @@
   border: 3px solid var(--ink);
   background: var(--chip-teal);
   box-shadow: 18px 6px 0 -2px var(--chip-yellow);
+  pointer-events: none;
 }
 
 .game-card:hover {
