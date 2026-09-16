@@ -1,0 +1,324 @@
+/* 로비: 나무 테이블 + 보드 상자 분위기 */
+#lobby {
+  position: relative;
+  padding: 28px 20px 80px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 220, 120, 0.18), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(0, 0, 0, 0.2), transparent 45%),
+    repeating-linear-gradient(
+      90deg,
+      var(--felt) 0 28px,
+      #1f7544 28px 56px
+    );
+  overflow: hidden;
+}
+
+#lobby::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 8px solid var(--wood-dark);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 0 0 6px var(--wood-light),
+    inset 0 0 40px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.lobby-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.lobby-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 8vw, 4.4rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--cream);
+  text-shadow:
+    4px 4px 0 var(--ink),
+    -2px 0 0 var(--p1),
+    2px 0 0 var(--p2);
+  animation: pop-in 0.4s ease-out;
+}
+
+.tagline {
+  margin: 10px 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--cream);
+  opacity: 0.95;
+}
+
+.panel {
+  background: linear-gradient(180deg, #d4a574 0%, var(--wood-mid) 100%);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+.panel-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.mode-row,
+.diff-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.seg-btn {
+  flex: 1;
+  min-width: 140px;
+  border: var(--border);
+  border-radius: 12px;
+  padding: 14px 12px;
+  font-size: 1rem;
+  font-weight: 900;
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.seg-btn[aria-pressed="true"] {
+  background: var(--gold-solid);
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+#difficulty-panel.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.score-pills {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.score-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: var(--border);
+  border-radius: 12px;
+  background: var(--cream);
+  font-weight: 900;
+  min-width: 130px;
+}
+
+.score-pill .num {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  margin-left: auto;
+}
+
+.score-pill.p1 {
+  border-color: var(--p1-dark);
+}
+
+.score-pill.p2 {
+  border-color: var(--p2-dark);
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.legend kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 2px 7px;
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-align: center;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.game-card {
+  position: relative;
+  text-align: left;
+  border: var(--border);
+  border-radius: 16px;
+  padding: 18px 16px 16px;
+  background:
+    linear-gradient(135deg, #fff9ec 0%, #ffe8b8 100%);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  transition: transform 0.1s ease;
+  overflow: hidden;
+}
+
+.game-card::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: var(--chip-teal);
+  box-shadow: 18px 6px 0 -2px var(--chip-yellow);
+}
+
+.game-card:hover {
+  transform: translate(-3px, -3px) rotate(-0.4deg);
+}
+
+.game-card:active {
+  transform: translate(2px, 2px);
+}
+
+.game-card h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.game-card .rule {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.game-card .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.meta-chip {
+  padding: 4px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.meta-chip.keys {
+  background: #e8f0ff;
+}
+
+/* CSS 주사위 장식 */
+.dice-deco {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 3px 3px 0 var(--ink);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.dice-deco span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.dice-a {
+  top: 40px;
+  left: 36px;
+  transform: rotate(-12deg);
+}
+
+.dice-a span:nth-child(1) {
+  top: 8px;
+  left: 8px;
+}
+.dice-a span:nth-child(2) {
+  top: 17px;
+  left: 17px;
+}
+.dice-a span:nth-child(3) {
+  bottom: 8px;
+  right: 8px;
+}
+
+.dice-b {
+  bottom: 50px;
+  right: 40px;
+  transform: rotate(18deg);
+  background: var(--chip-yellow);
+}
+
+.dice-b span:nth-child(1) {
+  top: 10px;
+  left: 10px;
+}
+.dice-b span:nth-child(2) {
+  top: 10px;
+  right: 10px;
+}
+.dice-b span:nth-child(3) {
+  bottom: 10px;
+  left: 10px;
+}
+.dice-b span:nth-child(4) {
+  bottom: 10px;
+  right: 10px;
+}
+.dice-b span:nth-child(5) {
+  top: 17px;
+  left: 17px;
+}
+
+@media (max-width: 700px) {
+  #lobby {
+    padding: 16px 10px 72px;
+  }
+  #lobby::before {
+    inset: 8px;
+    border-width: 5px;
+  }
+  .dice-deco {
+    display: none;
+  }
+}
