@@ -1,11 +1,11 @@
-/* 줄다리기 — 연타로 깃발 끌기 (~20초) */
+/* 퍽 밀치기 — 연타로 상대 골대 쪽 */
 (function (global) {
   "use strict";
 
   var DURATION = 20;
-  var RANGE = 42;
+  var RANGE = 40;
 
-  function createTug() {
+  function createPush() {
     var root = null;
     var cfg = null;
     var input = null;
@@ -13,9 +13,9 @@
     var raf = 0;
     var destroyed = false;
     var running = false;
-    var flag = 50;
-    var startAt = 0;
     var finished = false;
+    var puck = 50;
+    var startAt = 0;
     var cdCtrl = null;
     var resultCtrl = null;
     var els = {};
@@ -24,53 +24,56 @@
       return PartyUI.p2Label(cfg.mode);
     }
 
-    function sfx(name, opts) {
-      if (global.PartyApp && PartyApp.sfx) PartyApp.sfx(name, opts);
+    function sfx(name) {
+      if (global.PartyApp && PartyApp.sfx) PartyApp.sfx(name);
     }
 
     function build() {
       root.innerHTML =
         '<div class="hud">' +
-        '<div class="hud-player p1"><span class="tag">P1</span><span>연타 A</span></div>' +
-        '<div class="hud-center"><div class="hud-timer" id="tug-timer">20.0</div></div>' +
+        '<div class="hud-player p1"><span class="tag">P1</span><span>밀기 A</span></div>' +
+        '<div class="hud-center"><div class="hud-timer" id="pu-timer">20.0</div></div>' +
         '<div class="hud-player p2"><span class="tag">' +
         p2Label() +
-        "</span><span>연타 L</span></div>" +
+        "</span><span>밀기 L</span></div>" +
         "</div>" +
-        '<div class="game-stage tug-arena" id="tug-arena">' +
-        '<div class="tug-rope" id="tug-rope"></div>' +
-        '<div class="tug-flag" id="tug-flag" style="left:50%"></div>' +
-        '<div class="tug-labels"><span style="color:var(--p1-dark)">P1</span><span style="color:var(--p2-dark)">' +
+        '<div class="game-stage push-arena" id="pu-arena">' +
+        '<div class="push-goal p1-goal">P1 골</div>' +
+        '<div class="push-track"><div class="push-puck" id="pu-puck" style="left:50%"></div></div>' +
+        '<div class="push-goal p2-goal">' +
         p2Label() +
-        "</span></div>" +
-        '<div class="overlay" id="tug-overlay"><div class="countdown-num">3</div></div>' +
+        " 골</div>" +
+        '<div class="overlay" id="pu-overlay"><div class="countdown-num">3</div></div>' +
         "</div>";
-      els.timer = root.querySelector("#tug-timer");
-      els.flag = root.querySelector("#tug-flag");
-      els.rope = root.querySelector("#tug-rope");
-      els.overlay = root.querySelector("#tug-overlay");
-      els.arena = root.querySelector("#tug-arena");
+      els.timer = root.querySelector("#pu-timer");
+      els.puck = root.querySelector("#pu-puck");
+      els.overlay = root.querySelector("#pu-overlay");
+      els.arena = root.querySelector("#pu-arena");
     }
 
-    function paintFlag() {
-      els.flag.style.left = flag + "%";
-      var stretch = 1 + Math.abs(flag - 50) / 80;
-      els.rope.style.transform = "translateY(-50%) scaleX(" + stretch + ")";
-      els.flag.style.transform =
-        "translateY(-70%) rotate(" + ((flag - 50) * 0.35) + "deg)";
+    function paint() {
+      els.puck.style.left = puck + "%";
     }
 
     function nudge(dir) {
       if (!running || finished) return;
-      flag = Math.max(50 - RANGE, Math.min(50 + RANGE, flag + dir));
-      paintFlag();
+      puck = Math.max(50 - RANGE, Math.min(50 + RANGE, puck + dir));
+      paint();
       sfx("mash");
+      // instant goal
+      if (puck <= 50 - RANGE + 0.5) {
+        puck = 50 - RANGE;
+        endGame("p2");
+      } else if (puck >= 50 + RANGE - 0.5) {
+        puck = 50 + RANGE;
+        endGame("p1");
+      }
     }
 
     function onInput(msg) {
       if (msg.type !== "down" || !running) return;
-      if (msg.code === PartyInput.KEYS.P1_MAIN) nudge(-1.15);
-      if (cfg.mode === "pvp" && msg.code === PartyInput.KEYS.P2_MAIN) nudge(1.15);
+      if (msg.code === PartyInput.KEYS.P1_MAIN) nudge(1.4);
+      if (cfg.mode === "pvp" && msg.code === PartyInput.KEYS.P2_MAIN) nudge(-1.4);
     }
 
     function loop(now) {
@@ -79,10 +82,15 @@
       if (!running || finished) return;
       var left = Math.max(0, DURATION - (now - startAt) / 1000);
       els.timer.textContent = left.toFixed(1);
-      if (left <= 0) endRound();
+      if (left <= 0) {
+        var winner = "draw";
+        if (puck > 51) winner = "p1";
+        else if (puck < 49) winner = "p2";
+        endGame(winner);
+      }
     }
 
-    function endRound() {
+    function endGame(winner) {
       if (finished) return;
       finished = true;
       running = false;
@@ -90,14 +98,11 @@
         ai.destroy();
         ai = null;
       }
-      var winner = "draw";
-      if (flag < 49.2) winner = "p1";
-      else if (flag > 50.8) winner = "p2";
       if (cfg.onFinish) cfg.onFinish({ winner: winner, pending: true });
       resultCtrl = PartyUI.showResult(els.overlay, {
         winner: winner,
         mode: cfg.mode,
-        sub: "깃발 위치 " + flag.toFixed(1) + "%",
+        sub: "퍽 위치 " + puck.toFixed(1) + "%",
         arenaEl: els.arena,
         punch: true,
         onReplay: function () {
@@ -115,10 +120,10 @@
         cfg = options || {};
         destroyed = false;
         finished = false;
-        flag = 50;
         running = false;
+        puck = 50;
         build();
-        paintFlag();
+        paint();
         input = PartyInput.create({ ignoreP2: cfg.mode === "ai" });
         input.on(onInput);
       },
@@ -128,11 +133,11 @@
             if (destroyed) return;
             running = true;
             startAt = performance.now();
-            sfx("mashReset");
+            if (global.PartyApp) PartyApp.sfx("mashReset");
             raf = requestAnimationFrame(loop);
             if (cfg.mode === "ai") {
               ai = PartyAI.createMasher(cfg.difficulty || "normal", function () {
-                nudge(1.15);
+                nudge(-1.4);
               });
             }
           },
@@ -153,5 +158,5 @@
     };
   }
 
-  global.GameTug = { create: createTug };
+  global.GamePush = { create: createPush };
 })(window);
