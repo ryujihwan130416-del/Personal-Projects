@@ -10,10 +10,10 @@
     {
       id: "tug",
       name: "줄다리기",
-      rule: "주행동 키를 더 많이 연타해 깃발을 내 쪽으로!",
+      rule: "A/L로 끌고, S/K로 버티며 깃발을 내 쪽으로!",
       time: "약 20초",
-      keys: "P1 A · P2 L",
-      usesAlt: false,
+      keys: "P1 A/S · P2 L/K",
+      usesAlt: true,
       factory: function () {
         return GameTug.create();
       },
@@ -24,7 +24,6 @@
       rule: "「지금!」이 뜨면 누구보다 빨리. 가짜 신호는 함정!",
       time: "3판 2선승",
       keys: "P1 A · P2 L",
-      usesAlt: false,
       factory: function () {
         return GameDraw.create();
       },
@@ -46,7 +45,6 @@
       rule: "목표 존에서 게이지를 멈춰 고득점! 3라운드 합산.",
       time: "3라운드",
       keys: "P1 A · P2 L",
-      usesAlt: false,
       factory: function () {
         return GameStopbar.create();
       },
@@ -64,11 +62,11 @@
     },
     {
       id: "balloon",
-      name: "풍선 레이스",
-      rule: "연타로 풍선을 부풀려 먼저 가득 채우면 승!",
-      time: "약 20초",
-      keys: "P1 A · P2 L",
-      usesAlt: false,
+      name: "풍선 펌프",
+      rule: "부풀리다 랜덤 지점에서 펑! 조심 펌프(Q/O)로 위험을 줄여라.",
+      time: "약 22초",
+      keys: "P1 A/Q · P2 L/O",
+      usesExtra: true,
       factory: function () {
         return GameBalloon.create();
       },
@@ -76,23 +74,12 @@
     {
       id: "color",
       name: "색 신호",
-      rule: "내 색이 뜨면 즉시! 틀린 색은 실격 한 판.",
+      rule: "내 색·노랑만! 회색은 금지. Q/O는 「패스」(금지 라운드 전용).",
       time: "3판 2선승",
-      keys: "P1 A · P2 L",
-      usesAlt: false,
+      keys: "P1 A/Q · P2 L/O",
+      usesExtra: true,
       factory: function () {
         return GameColor.create();
-      },
-    },
-    {
-      id: "push",
-      name: "퍽 밀치기",
-      rule: "연타로 퍽을 상대 골로! 시간 종료 시 위치 판정.",
-      time: "약 20초",
-      keys: "P1 A · P2 L",
-      usesAlt: false,
-      factory: function () {
-        return GamePush.create();
       },
     },
     {
@@ -101,7 +88,6 @@
       rule: "박자에 맞춰 탭! 빗나가면 감점, 합산 점수 승.",
       time: "약 20초",
       keys: "P1 A · P2 L",
-      usesAlt: false,
       factory: function () {
         return GameRhythm.create();
       },
@@ -118,14 +104,14 @@
       },
     },
     {
-      id: "catch",
-      name: "공 받기",
-      rule: "떨어지는 공을 캐치 존에서 멈춰 잡아라. 3라운드.",
-      time: "3라운드",
-      keys: "P1 A · P2 L",
-      usesAlt: false,
+      id: "arena",
+      name: "링 아웃",
+      rule: "WASD vs 화살표로 밀고 밀어 링 밖으로! 2라이프.",
+      time: "약 30초",
+      keys: "P1 WASD · P2 ↑←↓→",
+      usesMove: true,
       factory: function () {
-        return GameCatch.create();
+        return GameArena.create();
       },
     },
   ];
@@ -499,6 +485,23 @@
         "</p>";
     }
 
+    var keyP1;
+    var keyP2;
+    if (gameMeta.usesMove) {
+      keyP1 = "P1 · 이동 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>";
+      keyP2 = p2Label() + " · 이동 <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd>";
+    } else {
+      keyP1 =
+        "P1 · 주행동 <kbd>A</kbd>" +
+        (gameMeta.usesAlt ? " · 보조 <kbd>S</kbd>" : "") +
+        (gameMeta.usesExtra ? " · 특수 <kbd>Q</kbd>" : "");
+      keyP2 =
+        p2Label() +
+        " · 주행동 <kbd>L</kbd>" +
+        (gameMeta.usesAlt ? " · 보조 <kbd>K</kbd>" : "") +
+        (gameMeta.usesExtra ? " · 특수 <kbd>O</kbd>" : "");
+    }
+
     els.gameRoot.innerHTML =
       '<div class="prep-panel">' +
       "<h2>" +
@@ -509,13 +512,11 @@
       "</p>" +
       tourLine +
       '<div class="key-guide">' +
-      '<div class="side p1">P1 · 주행동 <kbd>A</kbd>' +
-      (gameMeta.usesAlt ? " · 보조 <kbd>S</kbd>" : "") +
+      '<div class="side p1">' +
+      keyP1 +
       "</div>" +
       '<div class="side p2">' +
-      p2Label() +
-      " · 주행동 <kbd>L</kbd>" +
-      (gameMeta.usesAlt ? " · 보조 <kbd>K</kbd>" : "") +
+      keyP2 +
       "</div>" +
       "</div>" +
       '<p style="font-weight:800;opacity:.8">예상 ' +

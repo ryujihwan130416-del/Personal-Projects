@@ -598,6 +598,88 @@
   background: radial-gradient(circle at 35% 30%, #90caf9, var(--p2));
 }
 
+.balloon.danger {
+  animation: balloon-wobble 0.18s ease-in-out infinite alternate;
+}
+
+.balloon.popped {
+  background: #555 !important;
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+@keyframes balloon-wobble {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.15);
+  }
+}
+
+.tug-arena.brace-p1 {
+  box-shadow: inset 8px 0 0 var(--p1);
+}
+
+.tug-arena.brace-p2 {
+  box-shadow: inset -8px 0 0 var(--p2);
+}
+
+.tug-arena.brace-p1.brace-p2 {
+  box-shadow: inset 8px 0 0 var(--p1), inset -8px 0 0 var(--p2);
+}
+
+/* —— 링 아웃 —— */
+.arena-stage {
+  min-height: 440px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #1a3a2a, #0d2018);
+}
+
+.arena-ring {
+  position: relative;
+  width: min(420px, 86vw);
+  height: min(420px, 86vw);
+  margin: 16px auto 24px;
+  border-radius: 50%;
+  border: 6px solid var(--ink);
+  background:
+    radial-gradient(circle at center, #2a6b45 0 62%, #14532d 62% 100%);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.arena-ring::after {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border: 3px dashed rgba(255, 246, 224, 0.35);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.arena-player {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin-left: -22px;
+  margin-top: -22px;
+  border-radius: 50%;
+  border: 4px solid var(--ink);
+  z-index: 2;
+  transition: none;
+}
+
+.arena-player.p1 {
+  background: radial-gradient(circle at 35% 30%, #ff8a80, var(--p1));
+}
+
+.arena-player.p2 {
+  background: radial-gradient(circle at 35% 30%, #90caf9, var(--p2));
+}
+
+
 .balloon::after {
   content: "";
   display: block;
