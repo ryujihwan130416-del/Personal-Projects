@@ -468,16 +468,459 @@
   animation: shake-soft 0.35s ease;
 }
 
+.mole-hole.aimed-p1 {
+  box-shadow: inset 0 0 0 3px var(--p1);
+}
+
+.mole-hole.aimed-p2 {
+  box-shadow: inset 0 0 0 3px var(--p2);
+}
+
+.mole-hole.aimed-p1.aimed-p2 {
+  box-shadow: inset 0 0 0 3px var(--gold-solid);
+}
+
+.col-aim.aim-p1,
+.col-aim.aim-p2 {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.mole.claimed {
+  filter: brightness(1.4);
+}
+
+/* potato flight */
+.bomb-flight {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #555, #111);
+  border: 3px solid var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  top: 42%;
+  left: 50%;
+  margin-left: -24px;
+}
+
+.bomb-flight.visible {
+  opacity: 1;
+}
+
+.bomb-flight.fly-p1 {
+  animation: throw-right 0.16s ease-out forwards;
+}
+
+.bomb-flight.fly-p2 {
+  animation: throw-left 0.16s ease-out forwards;
+}
+
+.bomb-flight.slam.fly-p1 {
+  animation: throw-right 0.22s ease-out forwards;
+}
+
+.bomb-flight.slam.fly-p2 {
+  animation: throw-left 0.22s ease-out forwards;
+}
+
+@keyframes throw-right {
+  from {
+    transform: translateX(-90px) translateY(0) scale(0.8);
+  }
+  50% {
+    transform: translateX(0) translateY(-40px) scale(1.1);
+  }
+  to {
+    transform: translateX(90px) translateY(0) scale(0.9);
+  }
+}
+
+@keyframes throw-left {
+  from {
+    transform: translateX(90px) translateY(0) scale(0.8);
+  }
+  50% {
+    transform: translateX(0) translateY(-40px) scale(1.1);
+  }
+  to {
+    transform: translateX(-90px) translateY(0) scale(0.9);
+  }
+}
+
+.prep-tour {
+  font-weight: 900 !important;
+  color: var(--p1-dark);
+}
+
+/* —— 풍선 —— */
+.balloon-arena {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #87ceeb, #fff6e0 60%);
+}
+
+.balloon-row {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  padding: 24px;
+}
+
+.balloon-side {
+  text-align: center;
+  font-weight: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.balloon {
+  width: 90px;
+  height: 110px;
+  border-radius: 50% 50% 50% 50% / 45% 45% 55% 55%;
+  border: 4px solid var(--ink);
+  transform: scale(0.35);
+  transform-origin: bottom center;
+  transition: transform 0.08s linear;
+}
+
+.balloon-side.p1 .balloon {
+  background: radial-gradient(circle at 35% 30%, #ff8a80, var(--p1));
+}
+
+.balloon-side.p2 .balloon {
+  background: radial-gradient(circle at 35% 30%, #90caf9, var(--p2));
+}
+
+.balloon::after {
+  content: "";
+  display: block;
+  width: 12px;
+  height: 16px;
+  margin: 95px auto 0;
+  background: #333;
+  border: 2px solid var(--ink);
+  clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%);
+}
+
+/* —— 색 신호 —— */
+.color-arena {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+}
+
+.color-lamp {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 9vw, 4.5rem);
+  font-weight: 900;
+  min-width: 220px;
+  text-align: center;
+  padding: 28px 36px;
+  border: 6px solid var(--ink);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.color-lamp.wait {
+  background: #ddd;
+  color: #555;
+}
+
+.color-lamp.sig-p1 {
+  background: var(--p1);
+  color: #fff;
+  animation: pop-in 0.2s ease-out;
+}
+
+.color-lamp.sig-p2 {
+  background: var(--p2);
+  color: #fff;
+  animation: pop-in 0.2s ease-out;
+}
+
+.color-lamp.sig-both {
+  background: var(--gold-solid);
+  color: var(--ink);
+  animation: pop-in 0.2s ease-out;
+}
+
+.color-lamp.sig-none {
+  background: #666;
+  color: #ccc;
+  animation: pop-in 0.2s ease-out;
+}
+
+/* —— 퍽 —— */
+.push-arena {
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: stretch;
+  gap: 0;
+  background: #2d5a27;
+  padding: 20px 0;
+}
+
+.push-goal {
+  width: 70px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--ink);
+  margin: 40px 8px;
+  color: #fff;
+}
+
+.push-goal.p1-goal {
+  background: var(--p2);
+}
+
+.push-goal.p2-goal {
+  background: var(--p1);
+}
+
+.push-track {
+  flex: 1;
+  position: relative;
+  height: 80px;
+  margin: 0 8px;
+  border: var(--border);
+  border-radius: 40px;
+  background: linear-gradient(90deg, #aec4ff, #ffb4ae);
+}
+
+.push-puck {
+  position: absolute;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin-left: -28px;
+  margin-top: -28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #333);
+  border: 4px solid var(--ink);
+  transition: left 0.05s linear;
+  z-index: 2;
+}
+
+/* —— 리듬 —— */
+.rhythm-arena {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: radial-gradient(circle at center, #3a2060, #1a1028);
+}
+
+.rhythm-pulse {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 6px solid var(--gold-solid);
+  background: rgba(240, 192, 64, 0.2);
+  transition: transform 0.05s linear, opacity 0.05s linear;
+}
+
+.rhythm-beat {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: var(--cream);
+  text-shadow: 3px 3px 0 var(--ink);
+}
+
+.rhythm-beat.flash {
+  animation: pop-in 0.18s ease-out;
+  color: var(--gold-solid);
+}
+
+/* —— 사다리 —— */
+.ladder-arena {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #7eb6d9, #c48a3a);
+}
+
+.ladder-row {
+  flex: 1;
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  padding: 20px;
+}
+
+.ladder-col {
+  position: relative;
+  width: 120px;
+  height: 280px;
+  border: var(--border);
+  border-radius: 12px;
+  background: repeating-linear-gradient(
+    180deg,
+    #deb887 0 18px,
+    #c49a6c 18px 36px
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+  font-weight: 900;
+  overflow: hidden;
+}
+
+.ladder-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background: rgba(255, 246, 224, 0.35);
+  transition: height 0.08s linear;
+}
+
+.ladder-climber {
+  position: absolute;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  bottom: 0;
+  border-radius: 50%;
+  background: var(--gold-solid);
+  border: 3px solid var(--ink);
+  transition: bottom 0.08s linear;
+  z-index: 2;
+}
+
+.ladder-col:first-child .ladder-climber {
+  background: var(--p1);
+}
+
+.ladder-col:last-child .ladder-climber {
+  background: var(--p2);
+}
+
+.ladder-next {
+  position: relative;
+  z-index: 3;
+  font-size: 0.85rem;
+  background: var(--cream);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 2px 8px;
+  margin-top: 4px;
+}
+
+/* —— 공 받기 —— */
+.catch-arena {
+  min-height: 420px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.catch-lane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  font-weight: 900;
+  border-right: 3px solid var(--ink);
+}
+
+.catch-lane:last-of-type {
+  border-right: none;
+}
+
+.catch-lane.p1 {
+  background: #ffe8e6;
+}
+
+.catch-lane.p2 {
+  background: #e6eeff;
+}
+
+.catch-well {
+  position: relative;
+  width: 90%;
+  max-width: 200px;
+  height: 300px;
+  border: var(--border);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.catch-zone {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 210px;
+  height: 44px;
+  background: rgba(6, 214, 160, 0.4);
+  border-top: 3px dashed var(--ink);
+  border-bottom: 3px dashed var(--ink);
+}
+
+.catch-ball {
+  position: absolute;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #e6392e);
+  border: 3px solid var(--ink);
+}
+
+.catch-lane.p2 .catch-ball {
+  background: radial-gradient(circle at 35% 30%, #fff, #2d6cdf);
+}
+
+.catch-score {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 900;
+}
+
 @media (max-width: 700px) {
-  .stopbar-arena {
+  .stopbar-arena,
+  .catch-arena {
     grid-template-columns: 1fr;
   }
-  .stop-lane {
+  .stop-lane,
+  .catch-lane {
     border-right: none;
     border-bottom: 3px solid var(--ink);
   }
   .potato-arena {
     flex-direction: column;
     gap: 16px;
+  }
+  .push-arena {
+    flex-direction: column;
+  }
+  .push-goal {
+    writing-mode: horizontal-tb;
+    width: auto;
+    height: 40px;
+    margin: 8px 20px;
   }
 }

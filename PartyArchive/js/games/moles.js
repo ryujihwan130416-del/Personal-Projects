@@ -1,4 +1,4 @@
-/* 두더지 쟁탈 — 3x3, 열별 소유권 (~25초) */
+/* 두더지 쟁탈 — 보조키로 열 선택 + 타이머 누수 방지 */
 (function (global) {
   "use strict";
 
@@ -16,14 +16,19 @@
     var finished = false;
     var scores = { p1: 0, p2: 0 };
     var startAt = 0;
-    var moles = []; // {idx, col, upUntil, claimed}
+    var moles = [];
     var stunUntil = { p1: 0, p2: 0 };
+    var aimCol = { p1: 0, p2: 2 };
     var nextSpawn = 0;
+    var bag = null;
+    var cdCtrl = null;
+    var resultCtrl = null;
     var els = {};
     var holeEls = [];
+    var colEls = [];
 
     function p2Label() {
-      return cfg.mode === "ai" ? "AI" : "P2";
+      return PartyUI.p2Label(cfg.mode);
     }
 
     function sfx(name) {
@@ -34,6 +39,31 @@
       if (col === 0) return "p1";
       if (col === 2) return "p2";
       return "both";
+    }
+
+    function cycleAim(who) {
+      if (who === "p1") {
+        // 0 ↔ 1
+        aimCol.p1 = aimCol.p1 === 0 ? 1 : 0;
+      } else {
+        // 2 ↔ 1
+        aimCol.p2 = aimCol.p2 === 2 ? 1 : 2;
+      }
+      paintAim();
+      sfx("tick");
+    }
+
+    function paintAim() {
+      for (var c = 0; c < 3; c++) {
+        colEls[c].classList.toggle("aim-p1", aimCol.p1 === c);
+        colEls[c].classList.toggle("aim-p2", aimCol.p2 === c);
+      }
+      for (var i = 0; i < 9; i++) {
+        var col = i % 3;
+        var hole = holeEls[i].parentNode;
+        hole.classList.toggle("aimed-p1", aimCol.p1 === col);
+        hole.classList.toggle("aimed-p2", aimCol.p2 === col);
+      }
     }
 
     function build() {
@@ -55,10 +85,11 @@
         '</span><span id="mo-s2">0</span></div>' +
         "</div>" +
         '<div class="game-stage moles-arena" id="mo-arena">' +
-        '<div class="game-hint">왼쪽=P1 · 가운데=쟁탈 · 오른쪽=' +
-        p2Label() +
-        " · A / L</div>" +
-        '<div class="mole-col-label"><span style="color:var(--p1)">P1</span><span>쟁탈</span><span style="color:var(--p2)">' +
+        '<div class="game-hint">S/K로 열 선택 · A/L로 타격 · 가운데=쟁탈</div>' +
+        '<div class="mole-col-label">' +
+        '<span class="col-aim" data-col="0" style="color:var(--p1)">P1</span>' +
+        '<span class="col-aim" data-col="1">쟁탈</span>' +
+        '<span class="col-aim" data-col="2" style="color:var(--p2)">' +
         p2Label() +
         "</span></div>" +
         '<div class="mole-grid">' +
@@ -75,11 +106,15 @@
       for (var j = 0; j < 9; j++) {
         holeEls.push(root.querySelector("#mole-" + j));
       }
+      colEls = [];
+      root.querySelectorAll(".col-aim").forEach(function (el) {
+        colEls.push(el);
+      });
     }
 
     function paint() {
       for (var i = 0; i < 9; i++) {
-        holeEls[i].classList.remove("up");
+        holeEls[i].classList.remove("up", "claimed");
       }
       for (var k = 0; k < moles.length; k++) {
         if (!moles[k].claimed) holeEls[moles[k].idx].classList.add("up");
@@ -115,12 +150,13 @@
       if (!running || finished) return;
       if (now < stunUntil[who]) return;
 
-      // 자기 열 또는 가운데에서 올라온 두더지 중 가장 빨리 사라질 것
+      var targetCol = aimCol[who];
       var best = null;
       for (var i = 0; i < moles.length; i++) {
         var m = moles[i];
         if (m.claimed) continue;
         if (now > m.upUntil) continue;
+        if (m.col !== targetCol) continue;
         var owner = colOwner(m.col);
         if (owner !== "both" && owner !== who) continue;
         if (!best || m.upUntil < best.upUntil) best = m;
@@ -129,24 +165,35 @@
       if (!best) {
         stunUntil[who] = now + STUN;
         els.arena.classList.add("stun-flash");
-        setTimeout(function () {
+        bag.later(function () {
           if (els.arena) els.arena.classList.remove("stun-flash");
         }, 350);
-        sfx("miss");
+        sfx("thud");
         return;
       }
 
       best.claimed = true;
       scores[who]++;
-      sfx("tap");
+      holeEls[best.idx].classList.add("claimed");
+      var hole = holeEls[best.idx].parentNode;
+      var rect = hole.getBoundingClientRect();
+      var arenaRect = els.arena.getBoundingClientRect();
+      var x = ((rect.left + rect.width / 2 - arenaRect.left) / arenaRect.width) * 100;
+      var y = ((rect.top + rect.height / 2 - arenaRect.top) / arenaRect.height) * 100;
+      PartyUI.spawnPopup(els.arena, "+1", x, y, who === "p1" ? "pop-p1" : "pop-p2");
+      sfx("pop");
       paint();
     }
 
     function onInput(msg) {
       if (msg.type !== "down" || !running) return;
       var now = performance.now();
-      if (msg.code === PartyInput.KEYS.P1_MAIN) tryHit("p1", now);
-      if (cfg.mode === "pvp" && msg.code === PartyInput.KEYS.P2_MAIN) tryHit("p2", now);
+      if (msg.code === PartyInput.KEYS.P1_ALT) cycleAim("p1");
+      else if (msg.code === PartyInput.KEYS.P1_MAIN) tryHit("p1", now);
+      if (cfg.mode === "pvp") {
+        if (msg.code === PartyInput.KEYS.P2_ALT) cycleAim("p2");
+        else if (msg.code === PartyInput.KEYS.P2_MAIN) tryHit("p2", now);
+      }
     }
 
     function loop(now) {
@@ -157,7 +204,6 @@
       var left = Math.max(0, DURATION - (now - startAt) / 1000);
       els.timer.textContent = left.toFixed(1);
 
-      // 만료된 두더지 제거
       var changed = false;
       moles = moles.filter(function (m) {
         if (!m.claimed && now > m.upUntil) {
@@ -184,57 +230,20 @@
       var winner = "draw";
       if (scores.p1 > scores.p2) winner = "p1";
       else if (scores.p2 > scores.p1) winner = "p2";
-      els.arena.classList.add("shake");
-      var title =
-        winner === "draw" ? "무승부!" : winner === "p1" ? "P1 승리!" : p2Label() + " 승리!";
-      els.overlay.innerHTML =
-        '<div class="result-title">' +
-        title +
-        "</div>" +
-        '<div class="result-sub">' +
-        scores.p1 +
-        " : " +
-        scores.p2 +
-        "</div>" +
-        '<div class="result-actions">' +
-        '<button type="button" class="btn btn-primary" id="mo-again">다시하기</button>' +
-        '<button type="button" class="btn" id="mo-lobby">로비</button>' +
-        "</div>";
-      els.overlay.classList.remove("hidden");
-      sfx(winner === "draw" ? "draw" : "win");
       if (cfg.onFinish) cfg.onFinish({ winner: winner, pending: true });
-      root.querySelector("#mo-again").onclick = function () {
-        if (cfg.onFinish) cfg.onFinish({ winner: winner, replay: true });
-      };
-      root.querySelector("#mo-lobby").onclick = function () {
-        if (cfg.onFinish) cfg.onFinish({ winner: winner, replay: false });
-      };
-    }
-
-    function countdown(done) {
-      els.overlay.classList.remove("hidden");
-      els.overlay.innerHTML = '<div class="countdown-num" id="mo-cd">3</div>';
-      var cd = root.querySelector("#mo-cd");
-      var n = 3;
-      sfx("cd");
-      var t0 = performance.now();
-      function tick(now) {
-        if (destroyed) return;
-        var elapsed = (now - t0) / 1000;
-        var next = 3 - Math.floor(elapsed);
-        if (next !== n && next >= 1) {
-          n = next;
-          cd.textContent = String(n);
-          sfx("cd");
-        }
-        if (elapsed >= 3) {
-          els.overlay.classList.add("hidden");
-          done();
-          return;
-        }
-        raf = requestAnimationFrame(tick);
-      }
-      raf = requestAnimationFrame(tick);
+      resultCtrl = PartyUI.showResult(els.overlay, {
+        winner: winner,
+        mode: cfg.mode,
+        sub: scores.p1 + " : " + scores.p2,
+        arenaEl: els.arena,
+        punch: true,
+        onReplay: function () {
+          if (cfg.onFinish) cfg.onFinish({ winner: winner, replay: true });
+        },
+        onLobby: function () {
+          if (cfg.onFinish) cfg.onFinish({ winner: winner, replay: false });
+        },
+      });
     }
 
     return {
@@ -247,42 +256,81 @@
         scores = { p1: 0, p2: 0 };
         moles = [];
         stunUntil = { p1: 0, p2: 0 };
+        aimCol = { p1: 0, p2: 2 };
+        bag = PartyUI.createTimerBag();
         build();
+        paintAim();
         input = PartyInput.create({ ignoreP2: cfg.mode === "ai" });
         input.on(onInput);
       },
       start: function () {
-        countdown(function () {
-          if (destroyed) return;
-          running = true;
-          startAt = performance.now();
-          nextSpawn = startAt + 300;
-          raf = requestAnimationFrame(loop);
+        cdCtrl = PartyUI.runCountdown(els.overlay, {
+          done: function () {
+            if (destroyed) return;
+            running = true;
+            startAt = performance.now();
+            nextSpawn = startAt + 300;
+            raf = requestAnimationFrame(loop);
 
-          if (cfg.mode === "ai") {
-            ai = PartyAI.createActor(
-              cfg.difficulty || "normal",
-              function (now) {
-                if (now < stunUntil.p2) return false;
-                for (var i = 0; i < moles.length; i++) {
-                  var m = moles[i];
-                  if (m.claimed || now > m.upUntil) continue;
-                  var owner = colOwner(m.col);
-                  if (owner === "p2" || owner === "both") return true;
+            if (cfg.mode === "ai") {
+              var profile = PartyAI.pickProfile(cfg.difficulty || "normal");
+              ai = PartyAI.createActor(
+                cfg.difficulty || "normal",
+                function (now) {
+                  if (now < stunUntil.p2) return false;
+                  for (var i = 0; i < moles.length; i++) {
+                    var m = moles[i];
+                    if (m.claimed || now > m.upUntil) continue;
+                    var owner = colOwner(m.col);
+                    if (owner === "p2" || owner === "both") return true;
+                  }
+                  return false;
+                },
+                function () {
+                  var now = performance.now();
+                  // pick best available col for AI
+                  var bestCol = null;
+                  var bestUntil = Infinity;
+                  for (var i = 0; i < moles.length; i++) {
+                    var m = moles[i];
+                    if (m.claimed || now > m.upUntil) continue;
+                    var owner = colOwner(m.col);
+                    if (owner !== "p2" && owner !== "both") continue;
+                    // easy: hesitate on center
+                    if (owner === "both" && profile.mistakeRate > 0.25 && Math.random() < 0.4) {
+                      continue;
+                    }
+                    if (m.upUntil < bestUntil) {
+                      bestUntil = m.upUntil;
+                      bestCol = m.col;
+                    }
+                  }
+                  if (bestCol == null) return;
+                  aimCol.p2 = bestCol;
+                  paintAim();
+                  // hard: act sooner via smaller artificial delay already in actor
+                  tryHit("p2", performance.now());
+                },
+                {
+                  minGap: 90,
+                  extraDelay: function () {
+                    // easy slower on center contests
+                    if (aimCol.p2 === 1 && profile.mistakeRate > 0.2) return 80;
+                    if (profile.mistakeRate < 0.1) return -20;
+                    return 0;
+                  },
                 }
-                return false;
-              },
-              function () {
-                tryHit("p2", performance.now());
-              },
-              { minGap: 90 }
-            );
-          }
+              );
+            }
+          },
         });
       },
       destroy: function () {
         destroyed = true;
         running = false;
+        if (bag) bag.clear();
+        if (cdCtrl) cdCtrl.cancel();
+        if (resultCtrl) resultCtrl.destroy();
         if (raf) cancelAnimationFrame(raf);
         if (input) input.destroy();
         if (ai) ai.destroy();

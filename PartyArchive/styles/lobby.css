@@ -35,7 +35,57 @@
 
 .lobby-header {
   text-align: center;
-  margin-bottom: 22px;
+  margin-bottom: 14px;
+}
+
+.lobby-top {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.panel-compact {
+  margin-bottom: 0;
+  padding: 12px 14px;
+}
+
+.panel-compact .panel-title {
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.section-label {
+  margin: 14px 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--cream);
+  text-shadow: 2px 2px 0 var(--ink);
+}
+
+.legend-panel {
+  margin-top: 18px;
+}
+
+.legend-toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-weight: 900;
+  font-size: 1rem;
+  text-align: left;
+  padding: 0;
+  color: var(--ink);
+}
+
+.legend-body {
+  display: none;
+  margin-top: 12px;
+}
+
+.legend-body.open {
+  display: block;
 }
 
 .brand {
@@ -169,9 +219,9 @@
 
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
-  margin-top: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
 }
 
 .game-card {
@@ -186,6 +236,29 @@
   color: var(--ink);
   transition: transform 0.1s ease;
   overflow: hidden;
+}
+
+.game-card.meta-card {
+  background: linear-gradient(135deg, #ffe08a 0%, #f0c040 100%);
+}
+
+.game-card.recent {
+  box-shadow: 6px 6px 0 var(--p1), 0 0 0 3px var(--gold-solid);
+}
+
+.recent-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  padding: 3px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--p1);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 900;
+  pointer-events: none;
 }
 
 .game-card::before {
@@ -309,6 +382,12 @@
 .dice-b span:nth-child(5) {
   top: 17px;
   left: 17px;
+}
+
+@media (max-width: 900px) {
+  .lobby-top {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 700px) {

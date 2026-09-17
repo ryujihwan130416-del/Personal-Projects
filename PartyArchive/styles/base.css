@@ -227,6 +227,65 @@ input:focus-visible {
   animation: shake-soft 0.28s ease;
 }
 
+@keyframes shake-hard {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  20% {
+    transform: translate(-7px, 2px) scale(1.01);
+  }
+  40% {
+    transform: translate(7px, -2px) scale(0.99);
+  }
+  60% {
+    transform: translate(-5px, 1px);
+  }
+  80% {
+    transform: translate(5px, -1px);
+  }
+}
+
+.shake-hard {
+  animation: shake-hard 0.38s ease;
+}
+
+.countdown-go {
+  color: var(--gold-solid) !important;
+}
+
+.score-popup {
+  position: absolute;
+  z-index: 15;
+  pointer-events: none;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.4rem;
+  color: var(--ink);
+  text-shadow: 2px 2px 0 #fff;
+  animation: popup-rise 0.65s ease-out forwards;
+  transform: translate(-50%, -50%);
+}
+
+.score-popup.pop-p1 {
+  color: var(--p1-dark);
+}
+
+.score-popup.pop-p2 {
+  color: var(--p2-dark);
+}
+
+@keyframes popup-rise {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -40%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -120%);
+  }
+}
+
 .mute-fab {
   position: fixed;
   right: 16px;

@@ -1,10 +1,10 @@
-/* 눈치 대결 — 신호 후 빠른 손, 3판 2선승 + 동시 입력 무승부 */
+/* 색 신호 — 내 색만 누르기, 3판 2선승 */
 (function (global) {
   "use strict";
 
   var TIE_MS = 40;
 
-  function createDraw() {
+  function createColor() {
     var root = null;
     var cfg = null;
     var input = null;
@@ -14,10 +14,11 @@
     var round = 0;
     var bag = null;
     var aiTimer = 0;
-    var cdCtrl = null;
-    var resultCtrl = null;
+    var signal = null; // "p1" | "p2" | "both" | "none"
     var pendingWho = null;
     var pendingAt = 0;
+    var cdCtrl = null;
+    var resultCtrl = null;
     var els = {};
 
     function p2Label() {
@@ -35,65 +36,56 @@
       }
     }
 
-    function clearAll() {
-      if (bag) bag.clear();
-      clearAi();
-    }
-
     function build() {
       root.innerHTML =
         '<div class="hud">' +
-        '<div class="hud-player p1"><span class="tag">P1</span><span id="draw-s1">0</span></div>' +
-        '<div class="hud-center"><div class="hud-timer" id="draw-round">라운드 1</div></div>' +
+        '<div class="hud-player p1"><span class="tag">P1</span><span id="cl-s1">0</span></div>' +
+        '<div class="hud-center"><div class="hud-timer" id="cl-round">라운드 1</div></div>' +
         '<div class="hud-player p2"><span class="tag">' +
         p2Label() +
-        '</span><span id="draw-s2">0</span></div>' +
+        '</span><span id="cl-s2">0</span></div>' +
         "</div>" +
-        '<div class="game-stage draw-arena" id="draw-arena">' +
-        '<div class="game-hint">신호 전·가짜 신호에 누르면 실격 · 주행동 A / L</div>' +
-        '<div class="draw-signal wait" id="draw-sig">준비</div>' +
-        '<div class="draw-rounds"><span>P1 <strong id="draw-w1">0</strong></span><span>' +
+        '<div class="game-stage color-arena" id="cl-arena">' +
+        '<div class="game-hint">빨강=P1 · 파랑=' +
         p2Label() +
-        ' <strong id="draw-w2">0</strong></span></div>' +
-        '<div class="overlay" id="draw-overlay"><div class="countdown-num">3</div></div>' +
+        " · 노랑=둘 다 · 회색=금지</div>" +
+        '<div class="color-lamp wait" id="cl-lamp">대기</div>' +
+        '<div class="overlay" id="cl-overlay"><div class="countdown-num">3</div></div>' +
         "</div>";
-      els.sig = root.querySelector("#draw-sig");
-      els.overlay = root.querySelector("#draw-overlay");
-      els.round = root.querySelector("#draw-round");
-      els.w1 = root.querySelector("#draw-w1");
-      els.w2 = root.querySelector("#draw-w2");
-      els.s1 = root.querySelector("#draw-s1");
-      els.s2 = root.querySelector("#draw-s2");
-      els.arena = root.querySelector("#draw-arena");
+      els.lamp = root.querySelector("#cl-lamp");
+      els.overlay = root.querySelector("#cl-overlay");
+      els.round = root.querySelector("#cl-round");
+      els.s1 = root.querySelector("#cl-s1");
+      els.s2 = root.querySelector("#cl-s2");
+      els.arena = root.querySelector("#cl-arena");
+    }
+
+    function setLamp(text, cls) {
+      els.lamp.textContent = text;
+      els.lamp.className = "color-lamp " + cls;
     }
 
     function updateScores() {
-      els.w1.textContent = String(scores.p1);
-      els.w2.textContent = String(scores.p2);
       els.s1.textContent = String(scores.p1);
       els.s2.textContent = String(scores.p2);
-    }
-
-    function setSig(text, cls) {
-      els.sig.textContent = text;
-      els.sig.className = "draw-signal " + cls;
     }
 
     function winRound(who, reason) {
       if (phase === "locked") return;
       phase = "locked";
       pendingWho = null;
-      clearAll();
+      if (bag) bag.clear();
+      clearAi();
       if (who === "p1") scores.p1++;
       else if (who === "p2") scores.p2++;
-      // who === "tie" → 점수 없음
       updateScores();
       sfx(who === "tie" ? "draw" : "tap");
-      setSig(reason, who === "p1" ? "go" : who === "p2" ? "fake" : "wait");
+      setLamp(reason, "wait");
+      bag = PartyUI.createTimerBag();
       bag.later(function () {
         if (scores.p1 >= 2 || scores.p2 >= 2 || round >= 3) endMatch();
         else beginRound();
-      }, 900);
+      }, 850);
     }
 
     function endMatch() {
@@ -116,26 +108,24 @@
       });
     }
 
-    function beginGo() {
-      phase = "go";
-      pendingWho = null;
-      setSig("지금!", "go");
-      sfx("go");
-      if (cfg.mode === "ai") {
-        clearAi();
-        var delay = PartyAI.reactionDelay(cfg.difficulty || "normal");
-        aiTimer = setTimeout(function () {
-          if (destroyed || phase !== "go") return;
-          resolvePress("p2");
-        }, delay);
-      }
+    function allowed(who) {
+      if (signal === "both") return true;
+      return signal === who;
     }
 
     function resolvePress(who) {
       if (phase !== "go") return;
+      if (signal === "none") {
+        winRound(who === "p1" ? "p2" : "p1", (who === "p1" ? "P1" : p2Label()) + " 오답!");
+        return;
+      }
+      if (!allowed(who)) {
+        winRound(who === "p1" ? "p2" : "p1", (who === "p1" ? "P1" : p2Label()) + " 오답!");
+        return;
+      }
       var now = performance.now();
       if (pendingWho && pendingWho !== who && now - pendingAt <= TIE_MS) {
-        winRound("tie", "동시! 무승부");
+        winRound("tie", "동시!");
         return;
       }
       if (!pendingWho) {
@@ -143,58 +133,70 @@
         pendingAt = now;
         bag.later(function () {
           if (phase !== "go" || pendingWho !== who) return;
-          if (aiTimer) {
-            clearAi();
-          }
+          clearAi();
           winRound(who, (who === "p1" ? "P1" : p2Label()) + " 선제!");
         }, TIE_MS + 2);
         return;
       }
-      if (pendingWho === who) return;
-      winRound("tie", "동시! 무승부");
+      if (pendingWho !== who) winRound("tie", "동시!");
+    }
+
+    function flashSignal() {
+      phase = "go";
+      pendingWho = null;
+      var roll = Math.random();
+      if (roll < 0.28) {
+        signal = "p1";
+        setLamp("빨강!", "sig-p1");
+      } else if (roll < 0.56) {
+        signal = "p2";
+        setLamp("파랑!", "sig-p2");
+      } else if (roll < 0.82) {
+        signal = "both";
+        setLamp("노랑!", "sig-both");
+      } else {
+        signal = "none";
+        setLamp("금지!", "sig-none");
+      }
+      sfx(signal === "none" ? "fake" : "signal");
+
+      if (cfg.mode === "ai") {
+        clearAi();
+        var delay = PartyAI.reactionDelay(cfg.difficulty || "normal");
+        if (signal === "none" || signal === "p1") {
+          // maybe false press
+          if (PartyAI.shouldFalseStart(cfg.difficulty || "normal")) {
+            aiTimer = setTimeout(function () {
+              if (destroyed || phase !== "go") return;
+              resolvePress("p2");
+            }, delay);
+          }
+        } else {
+          aiTimer = setTimeout(function () {
+            if (destroyed || phase !== "go") return;
+            resolvePress("p2");
+          }, delay);
+        }
+      }
+
+      // auto expire round if no one presses
+      bag.later(function () {
+        if (phase !== "go") return;
+        if (signal === "none") winRound("tie", "참아냄!");
+        else winRound("tie", "시간 초과");
+      }, 1800);
     }
 
     function beginRound() {
-      clearAll();
+      if (bag) bag.clear();
       bag = PartyUI.createTimerBag();
+      clearAi();
       round++;
       phase = "wait";
-      pendingWho = null;
+      signal = null;
       els.round.textContent = "라운드 " + round;
-      setSig("대기...", "wait");
-
-      var wait = 1200 + Math.random() * 2300;
-      var useFake = Math.random() < 0.35;
-
-      if (useFake) {
-        var fakeAt = 700 + Math.random() * Math.min(1200, wait - 500);
-        bag.later(function () {
-          if (phase !== "wait") return;
-          phase = "fake";
-          setSig("잠깐!", "fake");
-          sfx("fake");
-          bag.later(function () {
-            if (phase !== "fake") return;
-            phase = "wait";
-            setSig("대기...", "wait");
-          }, 450 + Math.random() * 350);
-        }, fakeAt);
-      }
-
-      bag.later(function () {
-        if (phase === "locked") return;
-        beginGo();
-      }, wait);
-
-      if (cfg.mode === "ai" && PartyAI.shouldFalseStart(cfg.difficulty || "normal")) {
-        var early = 500 + Math.random() * Math.min(1500, wait - 200);
-        aiTimer = setTimeout(function () {
-          if (destroyed) return;
-          if (phase === "wait" || phase === "fake") {
-            winRound("p1", "AI 실격!");
-          }
-        }, early);
-      }
+      setLamp("대기...", "wait");
+      bag.later(flashSignal, 900 + Math.random() * 1600);
     }
 
     function onInput(msg) {
@@ -203,9 +205,8 @@
       if (msg.code === PartyInput.KEYS.P1_MAIN) who = "p1";
       else if (cfg.mode === "pvp" && msg.code === PartyInput.KEYS.P2_MAIN) who = "p2";
       else return;
-
-      if (phase === "wait" || phase === "fake") {
-        winRound(who === "p1" ? "p2" : "p1", (who === "p1" ? "P1" : p2Label()) + " 실격!");
+      if (phase === "wait") {
+        winRound(who === "p1" ? "p2" : "p1", (who === "p1" ? "P1" : p2Label()) + " 성급!");
         return;
       }
       if (phase === "go") resolvePress(who);
@@ -233,7 +234,8 @@
       },
       destroy: function () {
         destroyed = true;
-        clearAll();
+        if (bag) bag.clear();
+        clearAi();
         if (cdCtrl) cdCtrl.cancel();
         if (resultCtrl) resultCtrl.destroy();
         if (input) input.destroy();
@@ -243,5 +245,5 @@
     };
   }
 
-  global.GameDraw = { create: createDraw };
+  global.GameColor = { create: createColor };
 })(window);
