@@ -36,6 +36,8 @@ Unity 6.3 LTS용 1인칭 게임입니다. 캐릭터, 총, 단검, 맵, 걷기·�
 
 Unity 메뉴의 **사이트폴 → Linux 빌드** 또는 **사이트폴 → Windows 빌드**. Windows 빌드는 Windows Build Support 모듈이 필요합니다.
 
+클라우드에서 Unity 6.3.24f1 Linux 에디터를 받아 빌드를 시도했습니다. 이 머신에는 Unity 라이선스가 없어 `No valid Unity Editor license found`에서 멈췄습니다. 실행 파일은 Unity Hub에 로그인한 PC에서 위 메뉴로 만듭니다.
+
 ## 글꼴
 
 UI 글꼴은 나눔고딕입니다. 라이선스는 `Assets/Resources/OFL.txt`에 있습니다.
