@@ -1,6 +1,7 @@
 (function (root) {
   root.SR = root.SR || {};
   root.SR.caseList = [
+    root.SR.case00,
     root.SR.case01,
     root.SR.case02,
     root.SR.case03,

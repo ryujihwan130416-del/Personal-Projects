@@ -3,6 +3,7 @@
 var assert = require("assert");
 var logic = require("./logic.js");
 var cases = [
+  require("./cases/case00.js"),
   require("./cases/case01.js"),
   require("./cases/case02.js"),
   require("./cases/case03.js"),
@@ -50,8 +51,8 @@ cases.forEach(function (c) {
   );
 });
 
-var c1 = cases[0];
-var c2 = cases[1];
+var c1 = cases.filter(function (c) { return c.id === "case01"; })[0];
+var c2 = cases.filter(function (c) { return c.id === "case02"; })[0];
 fail(logic.submitFinding(c1, ["rest", "fish"], "동선모순"));
 fail(logic.submitFinding(c1, ["stmt", "fish"], "동선모순"));
 assert.strictEqual(logic.submitFinding(c1, ["stmt", "fish"], "허위인원").findingId, "f-stmt");
@@ -74,11 +75,11 @@ assert.strictEqual(JSON.stringify(card.fields).indexOf("17,600,000"), -1);
 var ins = c2.docs.filter(function (d) { return d.id === "ins"; })[0];
 assert.strictEqual(JSON.stringify(ins.fields).indexOf("18,000,000"), -1);
 
-var sign = cases[3].docs.filter(function (d) { return d.id === "sign"; })[0];
+var sign = cases.filter(function (c) { return c.id === "case04"; })[0].docs.filter(function (d) { return d.id === "sign"; })[0];
 var signed = sign.fields.filter(function (f) { return /^\d+$/.test(f.label); });
 assert.strictEqual(signed.length, 18);
 
-var finale = cases[5];
+var finale = cases.filter(function (c) { return c.id === "case06"; })[0];
 assert.strictEqual(logic.submitFinding(finale, ["p4-reg", "flow"], "조직연결").findingId, "f-org");
 fail(logic.submitFinding(finale, ["flow"], "조직연결"));
 fail(logic.submitFinding(finale, ["p4-reg", "flow", "p1-fish"], "조직연결"));

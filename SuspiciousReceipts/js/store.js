@@ -4,7 +4,7 @@
   var KEY = "suspiciousReceipts.v1";
   var SLOTS = "suspiciousReceipts.slots.v1";
   var META = "suspiciousReceipts.achievements.v1";
-  var ORDER = ["case01", "case02", "case03", "case04", "case05", "case06"];
+  var ORDER = ["case00", "case01", "case02", "case03", "case04", "case05", "case06"];
 
   function blankProgress() {
     var progress = {};
@@ -27,6 +27,7 @@
       playMs: 0,
       introSeen: false,
       coachSeen: false,
+      seenCinema: [],
       seen: [],
       scraps: [],
       memos: {},
@@ -60,6 +61,7 @@
     base.playMs = Number(raw.playMs) || 0;
     base.introSeen = !!raw.introSeen;
     base.coachSeen = !!raw.coachSeen;
+    base.seenCinema = Array.isArray(raw.seenCinema) ? raw.seenCinema.slice() : [];
     base.seen = Array.isArray(raw.seen) ? raw.seen.slice() : [];
     base.scraps = Array.isArray(raw.scraps) ? raw.scraps.slice() : [];
     base.memos = raw.memos || {};
@@ -77,6 +79,11 @@
         notes: row.notes || {}
       };
     });
+    if (!raw.progress.case00) {
+      var prior = raw.progress.case01;
+      var played = prior && prior.status && prior.status !== "new" && prior.status !== "locked";
+      if (played || raw.endingId) base.progress.case00.status = "closed";
+    }
     syncLocks(base);
     return base;
   }
