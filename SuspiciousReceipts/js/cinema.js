@@ -873,9 +873,7 @@
       typeInto(text);
       paintPips();
       cue(row.cue);
-      var hold = row.hold || 5200;
-      if (reduce) hold = row.card ? 700 : 1100;
-      else hold = Math.max(hold, text.length * 28 + 1500);
+      var hold = Math.max(row.hold || 5200, text.length * 28 + 1500);
       timer = setTimeout(advance, hold);
     }
 
