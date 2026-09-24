@@ -253,7 +253,8 @@
       h("h3", { text: "샘플 상점" }),
       h("p", { text: "이 종이는 장식이라 사건이 아닙니다." }),
       h("p", { class: "mono", text: "000-00-00000" }),
-      h("p", { class: "mono", text: "0원" })
+      h("p", { class: "mono", text: "0원" }),
+      h("span", { class: "ink-stamp", text: "착수" })
     ]);
   }
 

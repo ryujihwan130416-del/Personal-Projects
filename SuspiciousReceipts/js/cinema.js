@@ -60,6 +60,10 @@
     ]);
   }
 
+  function motionOff() {
+    try { return root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
+  }
+
   function seal(x, y, word, delay, cls) {
     var g = el("g", { class: cls || "anim-slam", style: delay ? "animation-delay:" + delay + "s" : null }, [
       el("circle", { cx: x, cy: y, r: "46", fill: "none", stroke: "#8f1d1d", "stroke-width": "4" }),
@@ -67,6 +71,21 @@
       tx(x, y + 6, word, { "text-anchor": "middle", fill: "#8f1d1d", "font-size": "18", "font-weight": "800" })
     ]);
     return g;
+  }
+
+  function sealOnPaper(x, y, word) {
+    var mover = el("g", {}, [
+      el("circle", { cx: "0", cy: "0", r: "44", fill: "rgba(143,29,29,0.08)", stroke: "#8f1d1d", "stroke-width": "4" }),
+      el("circle", { cx: "0", cy: "0", r: "36", fill: "none", stroke: "#8f1d1d", "stroke-width": "1.5" }),
+      tx(0, 6, word, { "text-anchor": "middle", fill: "#8f1d1d", "font-size": "18", "font-weight": "800" })
+    ]);
+    if (!motionOff() && mover.animate) {
+      mover.animate(
+        [{ transform: "translate(0px, 96px)" }, { transform: "translate(0px, 0px)" }],
+        { duration: 700, delay: 350, fill: "both", easing: "cubic-bezier(0.16, 0.9, 0.3, 1)" }
+      );
+    }
+    return el("g", { transform: "translate(" + x + " " + y + ")" }, [mover]);
   }
 
   var scenes = {
@@ -116,13 +135,13 @@
         el("g", { "clip-path": "url(#" + salt + "-win)" }, rain),
         tx(750, 168, "한빛", { "text-anchor": "middle", fill: "#e7c27a", "font-size": "20", class: "anim-flicker" }),
         el("rect", { x: "620", y: "70", width: "260", height: "200", fill: "none", stroke: "#d7b56a", "stroke-width": "4" }),
-        el("rect", { x: "0", y: "390", width: "960", height: "150", fill: "#3a2a1c" }),
+        el("rect", { x: "0", y: "400", width: "960", height: "140", fill: "#3a2a1c" }),
         el("g", { class: "anim-slide" }, [
-          paper(salt, 300, 230, 360, 200),
-          tx(400, 290, "특별조사2계", { "text-anchor": "middle", fill: "#1c1915", "font-size": "22" }),
-          tx(400, 322, "서류만 올라옵니다", { "text-anchor": "middle", fill: "#5e564c", "font-size": "16" })
-        ]),
-        seal(560, 375, "착수", 0.35, "anim-rise")
+          paper(salt, 280, 120, 400, 250),
+          tx(480, 175, "특별조사2계", { "text-anchor": "middle", fill: "#1c1915", "font-size": "22" }),
+          tx(480, 208, "서류만 올라옵니다", { "text-anchor": "middle", fill: "#5e564c", "font-size": "16" }),
+          sealOnPaper(480, 290, "착수")
+        ])
       ]);
     },
     receiptClock: function (salt) {
@@ -522,7 +541,7 @@
         paper(salt, 160, 70, 640, 380),
         tx(200, 125, head, { fill: "#8f1d1d", "font-size": "18" }),
         el("g", {}, body),
-        seal(700, 390, "정정", 0.4, "anim-rise")
+        sealOnPaper(730, 380, "정정")
       ]);
     },
     custody: function (salt, shot) {
@@ -545,7 +564,7 @@
         paper(salt, 280, 140, 400, 200),
         tx(310, 195, name, { fill: "#1c1915", "font-size": "28" }),
         tx(310, 230, line, { fill: "#5e564c", "font-size": "16" }),
-        seal(590, 290, "소환", 0.45, "anim-rise")
+        sealOnPaper(500, 270, "소환")
       ]);
     },
     stamp: function (salt, shot) {
