@@ -494,6 +494,7 @@
     }
     applyView(world, ui);
     placeSlipNotes(world, ui);
+    var desk = view.parentElement;
     desk.querySelectorAll("[data-pc]").forEach(function (el) {
       el.addEventListener("click", function (e) {
         e.stopPropagation();
