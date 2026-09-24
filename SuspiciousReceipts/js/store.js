@@ -4,7 +4,14 @@
   var KEY = "suspiciousReceipts.v1";
   var SLOTS = "suspiciousReceipts.slots.v1";
   var META = "suspiciousReceipts.achievements.v1";
-  var ORDER = ["case01", "case02", "case03", "case04", "case05", "case06"];
+  var ORDER = ["case00", "case01", "case02", "case03", "case04", "case05", "case06"];
+  var HINT_COST = 15;
+
+  function scoreOf(row) {
+    if (row && typeof row.score === "number" && !isNaN(row.score)) return Math.max(0, Math.round(row.score));
+    var level = row ? Number(row.hintLevel) || 0 : 0;
+    return Math.max(0, 100 - level * HINT_COST);
+  }
 
   function blankProgress() {
     var progress = {};
@@ -14,6 +21,9 @@
         found: [],
         rejects: 0,
         wrongFindings: 0,
+        hintLevel: 0,
+        score: 100,
+        failed: false,
         notes: {}
       };
     });
@@ -27,9 +37,13 @@
       playMs: 0,
       introSeen: false,
       coachSeen: false,
+      seenCinema: [],
       seen: [],
       scraps: [],
       memos: {},
+      coffeeGone: false,
+      pencilHits: 0,
+      pencilBroken: false,
       endingId: null,
       earned: [],
       updatedAt: null,
@@ -60,9 +74,13 @@
     base.playMs = Number(raw.playMs) || 0;
     base.introSeen = !!raw.introSeen;
     base.coachSeen = !!raw.coachSeen;
+    base.seenCinema = Array.isArray(raw.seenCinema) ? raw.seenCinema.slice() : [];
     base.seen = Array.isArray(raw.seen) ? raw.seen.slice() : [];
     base.scraps = Array.isArray(raw.scraps) ? raw.scraps.slice() : [];
     base.memos = raw.memos || {};
+    base.coffeeGone = !!raw.coffeeGone;
+    base.pencilHits = Number(raw.pencilHits) || 0;
+    base.pencilBroken = !!raw.pencilBroken;
     base.endingId = raw.endingId || null;
     base.earned = Array.isArray(raw.earned) ? raw.earned.slice() : [];
     base.updatedAt = raw.updatedAt || null;
@@ -74,9 +92,17 @@
         found: Array.isArray(row.found) ? row.found.slice() : [],
         rejects: Number(row.rejects) || 0,
         wrongFindings: Number(row.wrongFindings) || 0,
+        hintLevel: Number(row.hintLevel) || 0,
+        score: scoreOf(row),
+        failed: !!row.failed,
         notes: row.notes || {}
       };
     });
+    if (!raw.progress.case00) {
+      var prior = raw.progress.case01;
+      var played = prior && prior.status && prior.status !== "new" && prior.status !== "locked";
+      if (played || raw.endingId) base.progress.case00.status = "closed";
+    }
     syncLocks(base);
     return base;
   }
@@ -195,6 +221,8 @@
   SR.store = {
     KEY: KEY,
     ORDER: ORDER,
+    HINT_COST: HINT_COST,
+    scoreOf: scoreOf,
     blank: blank,
     load: load,
     save: save,

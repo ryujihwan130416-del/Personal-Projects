@@ -26,6 +26,59 @@
   var scrolls = {};
   var lastTick = Date.now();
   var playing = false;
+  var cine = null;
+  var WRONG_CINE = {
+    "wrong-kim": {
+      who: "김하늘",
+      head: "김하늘",
+      alibi: "김하늘은 회식 시각에 북원 시네마에 있었습니다. 결재란은 윤가람입니다.",
+      lines: ["21:10  북원 시네마", "회식 서명과 같은 시각", "결재란  윤가람", "번호  청람유통"]
+    },
+    "wrong-bae": {
+      who: "배수아",
+      head: "배수아",
+      alibi: "배수아의 분식과 택시는 그 시각의 자리일 뿐입니다. 도장은 윤가람입니다.",
+      lines: ["북원 분식  배수아", "서구 택시  배수아", "결재란  윤가람", "창구와 도장은 다릅니다"]
+    },
+    "wrong-choi": {
+      who: "최민재",
+      head: "최민재",
+      alibi: "최민재는 돈을 받은 사람입니다. 도장과 계좌 이름은 윤가람, 청람유통입니다.",
+      lines: ["입금  최민재  상담료", "도장  윤가람", "예금주  청람유통", "받은 사람과 정점은 다릅니다"]
+    }
+  };
+  var MISS = {
+    case00: {
+      person: ["연습 전표의 이름은 서도담입니다."],
+      crime: ["위반 이름은 연습 오독입니다.", "허위 야근이 아닙니다."],
+      findings: ["100번은 18:10과 18:22 사이", "18:40은 나중에 쓴 시각", "커피 영수증은 시각이 맞음"]
+    },
+    case01: {
+      person: ["이 철의 이름은 박도윤입니다.", "정도현의 택시는 다른 사람입니다."],
+      crime: ["위반은 허위 야근입니다.", "횡령이나 비자금이 아닙니다."],
+      findings: ["4820은 21:02와 21:40 사이", "22:14는 나중에 쓴 시각", "남해 카드는 본사 출입 안"]
+    },
+    case02: {
+      person: ["청구와 카드의 이름은 최민재입니다.", "윤가람은 결재란만입니다."],
+      crime: ["위반은 비자금 수수입니다.", "허위 야근이나 위조가 아닙니다."],
+      findings: ["토너 줄과 얼라인먼트", "부품이 급여의 세 배", "지급인  청람유통"]
+    },
+    case03: {
+      person: ["42만 원의 사용자는 한서준입니다.", "배수아는 오답으로 남아 있습니다."],
+      crime: ["위반은 허위 경비입니다.", "야근이나 비자금이 아닙니다."],
+      findings: ["북원 08:20  강남 09:05", "간격 45분, 최소 150분", "B-220은 폐업 상호"]
+    },
+    case04: {
+      person: ["청구하고 결재한 이름은 윤가람입니다.", "김하늘은 그 시각 북원에 있습니다."],
+      crime: ["위반은 허위 회식입니다.", "야근이나 위조만은 아닙니다."],
+      findings: ["서명 18, 스테이크 6", "김하늘  북원 영화", "간판 금강루, 등록 청람유통"]
+    },
+    case05: {
+      person: ["계약과 결재의 이름은 윤가람입니다.", "최민재는 돈을 받은 사람입니다."],
+      crime: ["위반은 허위 자문입니다.", "비자금 수수나 야근이 아닙니다."],
+      findings: ["블루컨설팅 번호는 청람유통", "같은 날 6,000,000 세 장", "예금주  청람유통"]
+    }
+  };
   var NEED_LABEL = { "f-sign": "결재연결", "f-org": "조직연결", "f-port": "항만의 조직연결" };
 
   SR.audio.setMuted(state.mute);
@@ -58,9 +111,40 @@
   }
 
   function persist() {
-    state.place = { screen: ui.screen === "title" ? state.place.screen : ui.screen, caseId: ui.caseId };
-    if (ui.screen === "intro") state.place = { screen: "folders", caseId: null };
+    if (ui.screen !== "cinema") {
+      state.place = { screen: ui.screen === "title" ? state.place.screen : ui.screen, caseId: ui.caseId };
+      if (ui.screen === "intro") state.place = { screen: "folders", caseId: null };
+    }
     SR.store.save(state);
+  }
+
+  function endingCinema(id) {
+    if (!id) return "";
+    if (id.indexOf("wrong-") === 0) return "ending-wrong";
+    return "ending-" + id;
+  }
+
+  function playCinema(id, opts, done) {
+    if (typeof opts === "function") { done = opts; opts = {}; }
+    opts = opts || {};
+    if (!SR.cinema || !SR.cinema.has(id)) {
+      if (done) done();
+      return;
+    }
+    ui.screen = "cinema";
+    ui.overlay = null;
+    ui.confirm = null;
+    paint();
+    var host = document.getElementById("cinema-host");
+    try {
+      cine = SR.cinema.run(host, id, opts, function () {
+        cine = null;
+        if (done) done();
+      });
+    } catch (err) {
+      cine = null;
+      if (done) done();
+    }
   }
 
   function grant(id) {
@@ -103,6 +187,10 @@
   }
 
   function paint() {
+    if (cine) {
+      cine.stop(true);
+      cine = null;
+    }
     var active = document.activeElement;
     var focusId = active && active.id;
     var sel = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
@@ -113,6 +201,7 @@
     else if (ui.screen === "folders") paintFolders();
     else if (ui.screen === "desk") paintDesk();
     else if (ui.screen === "epilogue") paintEpilogue();
+    else if (ui.screen === "cinema") root.appendChild(h("div", { id: "cinema-host" }));
     if (ui.overlay) root.appendChild(paintOverlay());
     if (ui.confirm) root.appendChild(paintConfirm());
     if (ui.toasts.length) {
@@ -151,20 +240,33 @@
     actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "manual", text: "매뉴얼" }));
     actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "mute", text: state.mute ? "소리 켜기" : "소리 끄기" }));
     copy.appendChild(actions);
-    copy.appendChild(h("p", { class: "footnote", text: "진행은 이 브라우저에 자동으로 남습니다. 슬롯에 저장하거나 파일로 내보낼 수 있습니다." }));
+    actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "replay-open", text: "착수 컷" }));
+    copy.appendChild(h("p", { class: "footnote", text: "진행은 이 브라우저에 자동으로 남습니다. 철 사이와 결말에는 컷이 있고, Esc로 건너뜁니다." }));
     view.appendChild(copy);
     view.appendChild(sampleReceipt());
     root.appendChild(view);
   }
 
   function sampleReceipt() {
-    return h("aside", { class: "sample-receipt", "aria-hidden": "true" }, [
-      h("p", { class: "paper-kicker", text: "견본 전표" }),
-      h("h3", { text: "샘플 상점" }),
-      h("p", { text: "이 종이는 장식이라 사건이 아닙니다." }),
-      h("p", { class: "mono", text: "000-00-00000" }),
-      h("p", { class: "mono", text: "0원" })
-    ]);
+    var doc = {
+      id: "title-slip",
+      kind: "receipt",
+      title: "골목등대",
+      fields: [
+        { label: "상호", value: "골목등대 분식" },
+        { label: "주소", value: "한빛시 중구 당직길 3" },
+        { label: "사업자번호", value: "305-19-44018" },
+        { label: "단말기", value: "G-02" },
+        { label: "영수증번호", value: "1184" },
+        { label: "일시", value: "2026-03-02 02:16" },
+        { label: "품목", value: "김밥 1  우동 1" },
+        { label: "결제", value: "현금" },
+        { label: "합계", value: "7,000원" }
+      ]
+    };
+    var slip = h("aside", { class: "sample-receipt", "aria-hidden": "true" });
+    slip.appendChild(SR.dom.paper(doc));
+    return slip;
   }
 
   function paintIntro() {
@@ -192,7 +294,7 @@
       h("div", { class: "bar-title" }, [
         h("p", { class: "kicker", text: "사건 철" }),
         h("h1", { text: "수상한 영수증" }),
-        h("p", { class: "question", text: "순서대로 열립니다. 끝까지 읽으면 마흔 분에서 한 시간입니다." })
+        h("p", { class: "question", text: "연습 전표부터 순서대로 열립니다. 철을 닫을 때마다 컷이 나옵니다." })
       ]),
       h("div", { class: "bar-actions" }, [
         h("span", { class: "chip", id: "play-clock", text: formatMs(state.playMs) }),
@@ -214,7 +316,7 @@
         "data-case": c.id,
         disabled: locked ? "disabled" : null
       }, [
-        h("span", { class: "folder-index", text: "0" + (i + 1) }),
+        h("span", { class: "folder-index", text: (i < 10 ? "0" : "") + i }),
         h("span", { class: "stamp " + st, text: stampText(c.id) }),
         h("strong", { text: c.title }),
         h("em", { text: c.question }),
@@ -279,6 +381,19 @@
       actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "rewrite", text: "의견서 다시 쓰기" }));
       actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "achievements", text: "업적" }));
     }
+    var cineId = ending ? endingCinema(ending.id) : data.id;
+    var cineExtra = ending ? WRONG_CINE[ending.id] : null;
+    if (SR.cinema && SR.cinema.has(cineId)) {
+      actions.appendChild(h("button", {
+        class: "btn",
+        type: "button",
+        "data-action": "replay-cine",
+        "data-cine-id": cineId,
+        "data-who": cineExtra ? cineExtra.who : "",
+        "data-alibi": cineExtra ? cineExtra.alibi : "",
+        text: "컷 다시 보기"
+      }));
+    }
     actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "save", text: "저장" }));
     actions.appendChild(h("button", { class: "btn primary", type: "button", "data-action": "folders", text: "철로" }));
     view.appendChild(actions);
@@ -288,14 +403,49 @@
 
   function paintOverlay() {
     var card = h("div", { class: "overlay-card", role: "dialog", "aria-modal": "true" });
+    if (ui.overlay === "notebook") card.classList.add("notebook-card");
     if (ui.overlay === "manual") fillManual(card);
     else if (ui.overlay === "save") fillSave(card);
     else if (ui.overlay === "achievements") fillAchievements(card);
     else if (ui.overlay === "people") fillPeople(card);
     else if (ui.overlay === "notebook") fillNotebook(card);
     else if (ui.overlay === "report") fillReport(card);
+    else if (ui.overlay === "hint") fillHint(card);
     var back = h("div", { class: "overlay" }, [card]);
     return back;
+  }
+
+  function hintRank(prog) {
+    return Math.max(prog.hintLevel || 0, prog.rejects >= 4 ? 2 : prog.rejects >= 2 ? 1 : 0);
+  }
+
+  function fillHint(card) {
+    var data = SR.caseById(ui.caseId);
+    var prog = data && state.progress[data.id];
+    card.appendChild(h("h2", { text: "과장 메모" }));
+    if (!data || !prog || !data.hints) {
+      card.appendChild(h("p", { text: "이 철에는 메모가 없습니다." }));
+    } else if (prog.status === "closed") {
+      card.appendChild(h("p", { text: "이미 닫힌 철입니다. 종결 메모를 읽으십시오." }));
+    } else {
+      var rank = hintRank(prog);
+      var score = SR.store.scoreOf(prog);
+      card.appendChild(h("p", { text: "첫 메모는 볼 서류만 가리킵니다. 그 다음 메모부터는 모순의 이름이 적혀 있고, 받으면 이 철은 실패입니다." }));
+      card.appendChild(h("p", { class: "mono", text: "이 철의 점수 " + score + "  ·  메모 한 장마다 -" + SR.store.HINT_COST }));
+      if (!rank) card.appendChild(h("p", { class: "hint-slip", text: "아직 꺼낸 메모가 없습니다." }));
+      data.hints.slice(0, rank).forEach(function (text, i) {
+        card.appendChild(h("p", { class: "hint-slip", text: (i + 1) + ". " + text }));
+      });
+      if (rank < data.hints.length) {
+        var spoil = rank + 1 >= 2;
+        card.appendChild(h("button", { class: "btn-hint", type: "button", "data-action": "hint-more" }, [
+          h("span", { class: "hint-word", text: spoil ? "정답 메모" : (rank ? "다음 메모" : "메모를 받는다") }),
+          h("span", { class: "hint-cost", text: spoil ? "실패" : ("-" + SR.store.HINT_COST) })
+        ]));
+      }
+      if (prog.failed) card.appendChild(h("p", { class: "hint-slip", text: "이 철은 실패입니다. 정답 메모를 받았습니다." }));
+    }
+    card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
   }
 
   function fillManual(card) {
@@ -307,7 +457,7 @@
     });
     card.appendChild(table);
     SR.manual.rules.forEach(function (rule) { card.appendChild(h("p", { text: rule })); });
-    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기." }));
+    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기. 힌트 메모를 한 장 꺼내면 그 철의 점수가 15 깎입니다. 컷이 나올 때 Esc는 건너뛰기, Enter는 다음 장면입니다." }));
     card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
   }
 
@@ -341,11 +491,11 @@
     var grid = h("div", { class: "ach-grid" });
     SR.achievements.forEach(function (a) {
       var on = !!owned[a.id];
-      grid.appendChild(h("article", { class: "ach" + (on ? " on" : " locked") }, [
-        h("p", { class: "stamp mini", text: on ? "달성" : "봉인" }),
-        h("strong", { text: on ? a.name : "봉인된 도장" }),
-        h("p", { text: on ? a.text : a.hint })
-      ]));
+      var cardBits = [];
+      if (on) cardBits.push(h("p", { class: "stamp mini open", text: "달성" }));
+      cardBits.push(h("strong", { text: on ? a.name : "아직 없음" }));
+      cardBits.push(h("p", { text: on ? a.text : a.hint }));
+      grid.appendChild(h("article", { class: "ach" + (on ? " on" : " locked") }, cardBits));
     });
     card.appendChild(grid);
     card.appendChild(h("button", { class: "btn tiny", type: "button", "data-action": "clear-ach", text: "업적만 지우기" }));
@@ -369,18 +519,30 @@
   }
 
   function fillNotebook(card) {
-    card.appendChild(h("h2", { text: "수첩" }));
-    if (!state.scraps.length) card.appendChild(h("p", { text: "남긴 서류가 없습니다. 서류를 연 뒤 수첩에 남기기를 누르십시오." }));
+    var spiral = h("div", { class: "nb-spiral", "aria-hidden": "true" });
+    var i;
+    for (i = 0; i < 12; i++) spiral.appendChild(h("i"));
+    var page = h("div", { class: "nb-page" });
+    page.appendChild(h("h2", { text: "조사 수첩" }));
+    page.appendChild(h("p", { class: "nb-kicker", text: "한빛지방국세청  ·  특별조사2계" }));
+    if (ui.caseId) {
+      page.appendChild(h("label", { class: "memo" }, [
+        h("span", { text: "이 철의 메모. 채점하지 않습니다." }),
+        h("textarea", { id: "case-memo", rows: "4", placeholder: "이 브라우저에 남습니다." }, [state.memos[ui.caseId] || ""])
+      ]));
+    }
+    if (!state.scraps.length) page.appendChild(h("p", { text: "아직 베껴 둔 줄이 없습니다. 서류를 연 뒤 수첩에 남기기를 누르십시오." }));
     state.scraps.forEach(function (s) {
-      var block = h("article", { class: "found-card" }, [
-        h("p", { class: "found-type", text: s.caseTitle + " · " + s.title })
-      ]);
-      (s.fields || []).slice(0, 4).forEach(function (f) {
-        block.appendChild(h("p", { text: f.label + "  " + f.value }));
+      var note = h("article", { class: "nb-note" });
+      note.appendChild(h("p", { class: "tape", text: s.caseTitle }));
+      note.appendChild(h("h3", { text: s.title }));
+      (s.fields || []).slice(0, 5).forEach(function (f) {
+        note.appendChild(h("p", { text: f.label + "   " + f.value }));
       });
-      card.appendChild(block);
+      page.appendChild(note);
     });
-    card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
+    page.appendChild(h("button", { class: "btn nb-close", type: "button", "data-action": "close-overlay", text: "수첩 덮기" }));
+    card.appendChild(h("div", { class: "notebook" }, [spiral, page]));
   }
 
   function fillReport(card) {
@@ -510,6 +672,17 @@
   function openCase(id) {
     var row = state.progress[id];
     if (!row || row.status === "locked") return;
+    if (id === "case06" && (state.seenCinema || []).indexOf("case06") < 0) {
+      state.seenCinema = state.seenCinema || [];
+      state.seenCinema.push("case06");
+      if (row.status === "new") row.status = "open";
+      ui.caseId = id;
+      ui.screen = "desk";
+      playing = true;
+      persist();
+      playCinema("case06", function () { openCase(id); });
+      return;
+    }
     if (row.status === "new") row.status = "open";
     ui.caseId = id;
     ui.docId = null;
@@ -612,19 +785,36 @@
       };
       ui.reportMsg = msg[res.reason] || "근거가 모자랍니다.";
       SR.audio.reject();
+      ui.overlay = null;
       persist();
-      paint();
+      var pack = (MISS[data.id] && MISS[data.id][res.reason]) || MISS[data.id] && MISS[data.id].findings || ["서류를 다시 읽으십시오."];
+      playCinema("miss", {
+        head: "사실",
+        lines: pack,
+        caption: pack[0]
+      }, function () {
+        ui.caseId = data.id;
+        ui.screen = "desk";
+        ui.overlay = "report";
+        playing = true;
+        paint();
+      });
       return;
     }
     prog.status = "closed";
-    if (prog.rejects === 0 && prog.wrongFindings === 0) grant("clean");
+    if (prog.rejects === 0 && prog.wrongFindings === 0 && !prog.failed) grant("clean");
     grant(data.id);
     ui.overlay = null;
+    ui.caseId = data.id;
     ui.screen = "epilogue";
     playing = true;
-    SR.audio.stamp();
     persist();
-    paint();
+    playCinema(data.id, function () {
+      ui.caseId = data.id;
+      ui.screen = "epilogue";
+      playing = true;
+      paint();
+    });
   }
 
   function commitEnding(id) {
@@ -647,19 +837,24 @@
     } else {
       grant(ending.achievement);
     }
-    if (prog.rejects === 0 && prog.wrongFindings === 0 && ending.id.indexOf("wrong") !== 0) grant("clean");
+    if (prog.rejects === 0 && prog.wrongFindings === 0 && !prog.failed && ending.id.indexOf("wrong") !== 0) grant("clean");
     ui.caseId = "case06";
     ui.screen = "epilogue";
     ui.overlay = null;
     ui.confirm = null;
     playing = true;
-    SR.audio.stamp();
     persist();
-    paint();
+    playCinema(endingCinema(ending.id), WRONG_CINE[ending.id] || {}, function () {
+      ui.caseId = "case06";
+      ui.screen = "epilogue";
+      playing = true;
+      paint();
+    });
   }
 
   function beginNew() {
     state = SR.store.blank();
+    state.place = { screen: "folders", caseId: null };
     SR.store.save(state);
     ui.caseId = null;
     ui.docId = null;
@@ -667,18 +862,27 @@
     ui.overlay = null;
     ui.confirm = null;
     ui.introPage = 0;
-    ui.screen = "intro";
     playing = true;
-    persist();
-    paint();
+    playCinema("open", function () {
+      state.introSeen = true;
+      ui.screen = "folders";
+      playing = true;
+      persist();
+      paint();
+    });
   }
 
   function resume() {
     if (!SR.store.dirty(state)) return;
     playing = true;
     if (!state.introSeen) {
-      ui.screen = "intro";
-      paint();
+      playCinema("open", function () {
+        state.introSeen = true;
+        ui.screen = "folders";
+        playing = true;
+        persist();
+        paint();
+      });
       return;
     }
     var place = state.place || {};
@@ -687,6 +891,19 @@
       ui.screen = "epilogue";
     } else if (place.screen === "desk" && place.caseId && state.progress[place.caseId] && state.progress[place.caseId].status !== "locked") {
       ui.caseId = place.caseId;
+      if (place.caseId === "case06" && (state.seenCinema || []).indexOf("case06") < 0) {
+        state.seenCinema = state.seenCinema || [];
+        state.seenCinema.push("case06");
+        ui.screen = "desk";
+        persist();
+        playCinema("case06", function () {
+          ui.caseId = "case06";
+          ui.screen = "desk";
+          playing = true;
+          paint();
+        });
+        return;
+      }
       ui.screen = "desk";
     } else if (place.screen === "epilogue" && place.caseId) {
       ui.caseId = place.caseId;
@@ -722,6 +939,26 @@
       paint();
       return;
     }
+    if (name === "hint") { ui.overlay = "hint"; paint(); return; }
+    if (name === "hint-more") {
+      var hintCase = SR.caseById(ui.caseId);
+      var hintProg = hintCase && state.progress[hintCase.id];
+      if (hintProg && hintCase.hints && hintRank(hintProg) < hintCase.hints.length) {
+        var nextHint = hintRank(hintProg) + 1;
+        hintProg.hintLevel = nextHint;
+        if (nextHint >= 2) {
+          hintProg.failed = true;
+          hintProg.score = 0;
+          pushToast("정답이 적힌 메모입니다. 이 철은 실패입니다.");
+        } else {
+          hintProg.score = Math.max(0, SR.store.scoreOf(hintProg) - SR.store.HINT_COST);
+        }
+        persist();
+      }
+      ui.overlay = "hint";
+      paint();
+      return;
+    }
     if (name === "manual") { ui.overlay = "manual"; paint(); return; }
     if (name === "achievements") { ui.overlay = "achievements"; paint(); return; }
     if (name === "people") { ui.overlay = "people"; paint(); return; }
@@ -744,6 +981,23 @@
     }
     if (name === "continue") { resume(); return; }
     if (name === "intro-next") { ui.introPage = 1; paint(); return; }
+    if (name === "replay-open") {
+      playCinema("open", function () {
+        ui.screen = "title";
+        playing = false;
+        paint();
+      });
+      return;
+    }
+    if (name === "replay-cine") {
+      var cineKey = el.getAttribute("data-cine-id");
+      playCinema(cineKey, WRONG_CINE[cineKey] || WRONG_CINE[state.endingId] || {}, function () {
+        ui.screen = "epilogue";
+        playing = true;
+        paint();
+      });
+      return;
+    }
     if (name === "intro-done") {
       state.introSeen = true;
       ui.screen = "folders";
@@ -753,7 +1007,75 @@
       return;
     }
     if (name === "open-case") { openCase(el.getAttribute("data-case")); return; }
+    if (name === "egg") {
+      var egg = el.getAttribute("data-egg");
+      if (egg === "coffee") {
+        if (state.coffeeGone) return;
+        state.coffeeHits = (state.coffeeHits || 0) + 1;
+        if (state.coffeeHits >= 5) {
+          state.coffeeGone = true;
+          persist();
+          playCinema("spill", function () {
+            ui.caseId = state.place && state.place.caseId;
+            ui.screen = "desk";
+            playing = true;
+            paint();
+          });
+          return;
+        }
+        pushToast(state.coffeeHits >= 4 ? "잔이 가장자리에 걸렸다." : "식은 커피다. 한 모금도 줄지 않았다.");
+        persist();
+        paint();
+        return;
+      }
+      if (egg === "pencil") {
+        if (state.pencilBroken) {
+          pushToast("이미 부러진 연필이다.");
+          paint();
+          return;
+        }
+        state.pencilHits = (state.pencilHits || 0) + 1;
+        if (state.pencilHits >= 4) {
+          state.pencilBroken = true;
+          pushToast("연필이 부러졌다.");
+        } else {
+          pushToast("연필심이 무뎌졌다. 숫자는 그래도 또렷하다.");
+        }
+        persist();
+        paint();
+        return;
+      }
+      if (egg === "eraser") pushToast("지운 자리가 하얗다. 누군가 먼저 적었다.");
+      paint();
+      return;
+    }
+    if (name === "draw-toggle") { ui.drawerOpen = !ui.drawerOpen; paint(); return; }
+    if (name === "draw-out") {
+      SR.desk.pullOut(ui, el.getAttribute("data-doc"));
+      ui.drawerOpen = true;
+      openDoc(el.getAttribute("data-doc"));
+      return;
+    }
+    if (name === "draw-in") {
+      var backId = el.getAttribute("data-doc") || ui.docId;
+      if (ui.out) delete ui.out[backId];
+      if (ui.docId === backId) ui.docId = null;
+      ui.drawerOpen = true;
+      paint();
+      return;
+    }
+    if (name === "note-open") { ui.noteOpen = true; paint(); return; }
+    if (name === "note-close") { ui.noteOpen = false; paint(); return; }
     if (name === "open-doc") { openDoc(el.getAttribute("data-doc")); return; }
+    if (name === "turn") {
+      var turnId = el.getAttribute("data-doc") || ui.docId;
+      var turnSpec = ui.papers && ui.papers[turnId];
+      if (!turnSpec) return;
+      turnSpec.rot = Math.round(turnSpec.rot / 90) * 90 + 90;
+      turnSpec.rot = ((turnSpec.rot % 360) + 360) % 360;
+      paint();
+      return;
+    }
     if (name === "pin") {
       var id = el.getAttribute("data-doc") || ui.docId;
       if (!id) return;
@@ -825,14 +1147,13 @@
       state = loaded;
       SR.audio.setMuted(state.mute);
       grant("resume");
+      pushToast("저장한 조사를 펼쳤습니다.");
       ui.overlay = null;
       ui.confirm = null;
       ui.docId = null;
       ui.pins = [];
       playing = true;
       resume();
-      pushToast("저장한 조사를 펼쳤습니다.");
-      paint();
       return;
     }
     if (name === "clear-slot") {
@@ -865,6 +1186,24 @@
       paint();
     }
   }
+
+  root.addEventListener("sr-pin", function (e) {
+    var id = e.detail && e.detail.id;
+    if (!id) return;
+    if (e.detail.tab) ui.pcTab = e.detail.tab;
+    if (ui.pins.indexOf(id) !== -1) {
+      pushToast("이미 대조에 있습니다.");
+      paint();
+      return;
+    }
+    if (ui.pins.length >= 3) {
+      pushToast("대조는 3장까지입니다.");
+      paint();
+      return;
+    }
+    ui.pins.push(id);
+    paint();
+  });
 
   root.addEventListener("click", function (e) {
     var t = e.target.closest("[data-action]");
@@ -939,6 +1278,12 @@
   });
 
   document.addEventListener("keydown", function (e) {
+    if (ui.screen === "cinema" && cine) {
+      if (e.key === "Escape") { e.preventDefault(); cine.skip(); return; }
+      if (e.target && e.target.closest && e.target.closest("[data-cine='skip']")) return;
+      if (e.key === " " || e.key === "Enter" || e.key === "ArrowRight") { e.preventDefault(); cine.advance(); return; }
+      return;
+    }
     var tag = e.target && e.target.tagName;
     var typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
     if (e.key === "Escape") {
@@ -985,7 +1330,7 @@
       state.playMs += delta;
       var clock = document.getElementById("play-clock");
       if (clock) clock.textContent = formatMs(state.playMs);
-      if (state.playMs >= 40 * 60 * 1000 && grant("night")) paint();
+      if (state.playMs >= 40 * 60 * 1000 && grant("night") && ui.screen !== "cinema") paint();
     }
   }, 1000);
 
