@@ -132,12 +132,15 @@
   }
 
   function props() {
-    return h("div", { class: "scenery", "aria-hidden": "true" }, [
-      h("div", { class: "mug-set" }, [
+    return h("div", { class: "scenery" }, [
+      h("button", { type: "button", class: "mug-set", "data-action": "egg", "data-egg": "coffee", "aria-label": "커피" }, [
         h("div", { class: "saucer" }),
         h("div", { class: "cup" }, [h("div", { class: "coffee" })])
       ]),
-      h("div", { class: "pen" })
+      h("div", { class: "pen", "aria-hidden": "true" }),
+      h("button", { type: "button", class: "pencil", "data-action": "egg", "data-egg": "pencil", "aria-label": "노란 연필" }),
+      h("div", { class: "pencil spare", "aria-hidden": "true" }),
+      h("button", { type: "button", class: "eraser", "data-action": "egg", "data-egg": "eraser", "aria-label": "지우개" })
     ]);
   }
 

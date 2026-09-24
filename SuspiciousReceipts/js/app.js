@@ -992,6 +992,17 @@
       return;
     }
     if (name === "open-case") { openCase(el.getAttribute("data-case")); return; }
+    if (name === "egg") {
+      var eggs = {
+        coffee: "식은 커피다. 한 모금도 줄지 않았다.",
+        pencil: "연필심이 무뎌졌다. 숫자는 그래도 또렷하다.",
+        eraser: "지운 자리가 하얗다. 누군가 먼저 적었다."
+      };
+      var line = eggs[el.getAttribute("data-egg")];
+      if (line) pushToast(line);
+      paint();
+      return;
+    }
     if (name === "draw-toggle") { ui.drawerOpen = !ui.drawerOpen; paint(); return; }
     if (name === "draw-out") {
       SR.desk.pullOut(ui, el.getAttribute("data-doc"));
