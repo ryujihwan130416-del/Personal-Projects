@@ -23,6 +23,7 @@
         wrongFindings: 0,
         hintLevel: 0,
         score: 100,
+        failed: false,
         notes: {}
       };
     });
@@ -40,6 +41,9 @@
       seen: [],
       scraps: [],
       memos: {},
+      coffeeGone: false,
+      pencilHits: 0,
+      pencilBroken: false,
       endingId: null,
       earned: [],
       updatedAt: null,
@@ -74,6 +78,9 @@
     base.seen = Array.isArray(raw.seen) ? raw.seen.slice() : [];
     base.scraps = Array.isArray(raw.scraps) ? raw.scraps.slice() : [];
     base.memos = raw.memos || {};
+    base.coffeeGone = !!raw.coffeeGone;
+    base.pencilHits = Number(raw.pencilHits) || 0;
+    base.pencilBroken = !!raw.pencilBroken;
     base.endingId = raw.endingId || null;
     base.earned = Array.isArray(raw.earned) ? raw.earned.slice() : [];
     base.updatedAt = raw.updatedAt || null;
@@ -87,6 +94,7 @@
         wrongFindings: Number(row.wrongFindings) || 0,
         hintLevel: Number(row.hintLevel) || 0,
         score: scoreOf(row),
+        failed: !!row.failed,
         notes: row.notes || {}
       };
     });

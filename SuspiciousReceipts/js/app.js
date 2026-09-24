@@ -430,18 +430,20 @@
     } else {
       var rank = hintRank(prog);
       var score = SR.store.scoreOf(prog);
-      card.appendChild(h("p", { text: "메모는 볼 서류의 윤곽과 모순의 이름만 말합니다. 정답 이름은 적지 않습니다." }));
+      card.appendChild(h("p", { text: "첫 메모는 볼 서류만 가리킵니다. 그 다음 메모부터는 모순의 이름이 적혀 있고, 받으면 이 철은 실패입니다." }));
       card.appendChild(h("p", { class: "mono", text: "이 철의 점수 " + score + "  ·  메모 한 장마다 -" + SR.store.HINT_COST }));
       if (!rank) card.appendChild(h("p", { class: "hint-slip", text: "아직 꺼낸 메모가 없습니다." }));
       data.hints.slice(0, rank).forEach(function (text, i) {
         card.appendChild(h("p", { class: "hint-slip", text: (i + 1) + ". " + text }));
       });
       if (rank < data.hints.length) {
+        var spoil = rank + 1 >= 2;
         card.appendChild(h("button", { class: "btn-hint", type: "button", "data-action": "hint-more" }, [
-          h("span", { class: "hint-word", text: rank ? "다음 메모" : "메모를 받는다" }),
-          h("span", { class: "hint-cost", text: "-" + SR.store.HINT_COST })
+          h("span", { class: "hint-word", text: spoil ? "정답 메모" : (rank ? "다음 메모" : "메모를 받는다") }),
+          h("span", { class: "hint-cost", text: spoil ? "실패" : ("-" + SR.store.HINT_COST) })
         ]));
       }
+      if (prog.failed) card.appendChild(h("p", { class: "hint-slip", text: "이 철은 실패입니다. 정답 메모를 받았습니다." }));
     }
     card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
   }
@@ -523,6 +525,12 @@
     var page = h("div", { class: "nb-page" });
     page.appendChild(h("h2", { text: "조사 수첩" }));
     page.appendChild(h("p", { class: "nb-kicker", text: "한빛지방국세청  ·  특별조사2계" }));
+    if (ui.caseId) {
+      page.appendChild(h("label", { class: "memo" }, [
+        h("span", { text: "이 철의 메모. 채점하지 않습니다." }),
+        h("textarea", { id: "case-memo", rows: "4", placeholder: "이 브라우저에 남습니다." }, [state.memos[ui.caseId] || ""])
+      ]));
+    }
     if (!state.scraps.length) page.appendChild(h("p", { text: "아직 베껴 둔 줄이 없습니다. 서류를 연 뒤 수첩에 남기기를 누르십시오." }));
     state.scraps.forEach(function (s) {
       var note = h("article", { class: "nb-note" });
@@ -794,7 +802,7 @@
       return;
     }
     prog.status = "closed";
-    if (prog.rejects === 0 && prog.wrongFindings === 0) grant("clean");
+    if (prog.rejects === 0 && prog.wrongFindings === 0 && !prog.failed) grant("clean");
     grant(data.id);
     ui.overlay = null;
     ui.caseId = data.id;
@@ -829,7 +837,7 @@
     } else {
       grant(ending.achievement);
     }
-    if (prog.rejects === 0 && prog.wrongFindings === 0 && ending.id.indexOf("wrong") !== 0) grant("clean");
+    if (prog.rejects === 0 && prog.wrongFindings === 0 && !prog.failed && ending.id.indexOf("wrong") !== 0) grant("clean");
     ui.caseId = "case06";
     ui.screen = "epilogue";
     ui.overlay = null;
@@ -936,8 +944,15 @@
       var hintCase = SR.caseById(ui.caseId);
       var hintProg = hintCase && state.progress[hintCase.id];
       if (hintProg && hintCase.hints && hintRank(hintProg) < hintCase.hints.length) {
-        hintProg.hintLevel = hintRank(hintProg) + 1;
-        hintProg.score = Math.max(0, SR.store.scoreOf(hintProg) - SR.store.HINT_COST);
+        var nextHint = hintRank(hintProg) + 1;
+        hintProg.hintLevel = nextHint;
+        if (nextHint >= 2) {
+          hintProg.failed = true;
+          hintProg.score = 0;
+          pushToast("정답이 적힌 메모입니다. 이 철은 실패입니다.");
+        } else {
+          hintProg.score = Math.max(0, SR.store.scoreOf(hintProg) - SR.store.HINT_COST);
+        }
         persist();
       }
       ui.overlay = "hint";
@@ -992,7 +1007,75 @@
       return;
     }
     if (name === "open-case") { openCase(el.getAttribute("data-case")); return; }
+    if (name === "egg") {
+      var egg = el.getAttribute("data-egg");
+      if (egg === "coffee") {
+        if (state.coffeeGone) return;
+        state.coffeeHits = (state.coffeeHits || 0) + 1;
+        if (state.coffeeHits >= 5) {
+          state.coffeeGone = true;
+          persist();
+          playCinema("spill", function () {
+            ui.caseId = state.place && state.place.caseId;
+            ui.screen = "desk";
+            playing = true;
+            paint();
+          });
+          return;
+        }
+        pushToast(state.coffeeHits >= 4 ? "잔이 가장자리에 걸렸다." : "식은 커피다. 한 모금도 줄지 않았다.");
+        persist();
+        paint();
+        return;
+      }
+      if (egg === "pencil") {
+        if (state.pencilBroken) {
+          pushToast("이미 부러진 연필이다.");
+          paint();
+          return;
+        }
+        state.pencilHits = (state.pencilHits || 0) + 1;
+        if (state.pencilHits >= 4) {
+          state.pencilBroken = true;
+          pushToast("연필이 부러졌다.");
+        } else {
+          pushToast("연필심이 무뎌졌다. 숫자는 그래도 또렷하다.");
+        }
+        persist();
+        paint();
+        return;
+      }
+      if (egg === "eraser") pushToast("지운 자리가 하얗다. 누군가 먼저 적었다.");
+      paint();
+      return;
+    }
+    if (name === "draw-toggle") { ui.drawerOpen = !ui.drawerOpen; paint(); return; }
+    if (name === "draw-out") {
+      SR.desk.pullOut(ui, el.getAttribute("data-doc"));
+      ui.drawerOpen = true;
+      openDoc(el.getAttribute("data-doc"));
+      return;
+    }
+    if (name === "draw-in") {
+      var backId = el.getAttribute("data-doc") || ui.docId;
+      if (ui.out) delete ui.out[backId];
+      if (ui.docId === backId) ui.docId = null;
+      ui.drawerOpen = true;
+      paint();
+      return;
+    }
+    if (name === "note-open") { ui.noteOpen = true; paint(); return; }
+    if (name === "note-close") { ui.noteOpen = false; paint(); return; }
     if (name === "open-doc") { openDoc(el.getAttribute("data-doc")); return; }
+    if (name === "turn") {
+      var turnId = el.getAttribute("data-doc") || ui.docId;
+      var turnSpec = ui.papers && ui.papers[turnId];
+      if (!turnSpec) return;
+      turnSpec.rot = Math.round(turnSpec.rot / 90) * 90 + 90;
+      turnSpec.rot = ((turnSpec.rot % 360) + 360) % 360;
+      paint();
+      return;
+    }
     if (name === "pin") {
       var id = el.getAttribute("data-doc") || ui.docId;
       if (!id) return;
@@ -1103,6 +1186,24 @@
       paint();
     }
   }
+
+  root.addEventListener("sr-pin", function (e) {
+    var id = e.detail && e.detail.id;
+    if (!id) return;
+    if (e.detail.tab) ui.pcTab = e.detail.tab;
+    if (ui.pins.indexOf(id) !== -1) {
+      pushToast("이미 대조에 있습니다.");
+      paint();
+      return;
+    }
+    if (ui.pins.length >= 3) {
+      pushToast("대조는 3장까지입니다.");
+      paint();
+      return;
+    }
+    ui.pins.push(id);
+    paint();
+  });
 
   root.addEventListener("click", function (e) {
     var t = e.target.closest("[data-action]");

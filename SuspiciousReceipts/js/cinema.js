@@ -580,6 +580,20 @@
           tx(480, 262, word, { "text-anchor": "middle", fill: "#8f1d1d", "font-size": "42", "font-weight": "800" })
         ])
       ]);
+    },
+    spill: function (salt) {
+      return svg(salt, [
+        el("rect", { width: "960", height: "540", fill: "#c4b59a" }),
+        el("rect", { x: "80", y: "70", width: "800", height: "400", rx: "28", fill: "#e4b978" }),
+        el("ellipse", { cx: "430", cy: "300", rx: "150", ry: "46", fill: "#6a3a22", opacity: "0.85" }),
+        el("g", { transform: "rotate(-28 390 250)" }, [
+          el("ellipse", { cx: "390", cy: "250", rx: "54", ry: "22", fill: "#1b1d22" }),
+          el("path", { d: "M430 236 h28 a16 16 0 0 1 0 28 h-28", fill: "none", stroke: "#1b1d22", "stroke-width": "8" })
+        ]),
+        el("path", { d: "M360 270 l18 22 l-8 6 z", fill: "#d7d7d7" }),
+        el("path", { d: "M470 286 l22 -8 l6 16 z", fill: "#ececec" }),
+        el("path", { d: "M410 320 l14 18 l-16 4 z", fill: "#c8c8c8" })
+      ]);
     }
   };
 
@@ -797,6 +811,14 @@
         card("사실", "정점이 아닙니다"),
         shot("fact", function (opts) { return opts.alibi || "서류의 이름과 도장의 이름이 다릅니다."; }, "paper"),
         shot("stamp", "의견서는 그 사실 위에서 닫힙니다.", "stamp", { word: "정정" })
+      ]
+    },
+    spill: {
+      kicker: "책상",
+      title: "잔",
+      reel: "DESK",
+      shots: [
+        shot("spill", "손이 잔을 스쳤습니다. 커피가 책상에 퍼지고, 잔은 조각이 됩니다.", "low")
       ]
     }
   };
