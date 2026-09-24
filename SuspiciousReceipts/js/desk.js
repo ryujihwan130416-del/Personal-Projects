@@ -120,6 +120,7 @@
         h("p", { class: "question", text: data.question })
       ]),
       h("div", { class: "bar-actions" }, chips.concat([
+        h("button", { class: "btn btn-on-dark", type: "button", "data-action": "hint", text: "힌트" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "manual", text: "매뉴얼" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "people", text: "인물" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "notebook", text: "수첩" }),
@@ -262,12 +263,15 @@
       if (prog.notes[id]) card.appendChild(h("p", { class: "found-note", text: prog.notes[id] }));
       found.appendChild(card);
     });
-    if (prog.rejects >= 2 && data.hints && data.hints.length) {
-      found.appendChild(h("article", { class: "hint-slip" }, [
-        h("p", { class: "found-type", text: "과장 메모" }),
-        h("p", { text: data.hints[0] }),
-        prog.rejects >= 4 && data.hints[1] ? h("p", { text: data.hints[1] }) : null
-      ]));
+    var hintLevel = Math.max(prog.hintLevel || 0, prog.rejects >= 4 ? 2 : prog.rejects >= 2 ? 1 : 0);
+    if (hintLevel && data.hints && data.hints.length) {
+      var slip = h("article", { class: "hint-slip" }, [
+        h("p", { class: "found-type", text: "과장 메모" })
+      ]);
+      data.hints.slice(0, hintLevel).forEach(function (text) {
+        slip.appendChild(h("p", { text: text }));
+      });
+      found.appendChild(slip);
     }
     if (closed && data.epilogue) {
       found.appendChild(h("button", { class: "btn", type: "button", "data-action": "epilogue", text: "종결 메모" }));
