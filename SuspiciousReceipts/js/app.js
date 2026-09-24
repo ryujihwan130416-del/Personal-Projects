@@ -455,7 +455,7 @@
     });
     card.appendChild(table);
     SR.manual.rules.forEach(function (rule) { card.appendChild(h("p", { text: rule })); });
-    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기. 힌트 메모를 한 장 꺼내면 그 철의 점수가 15 깎입니다. 컷이 나올 때 Esc는 건너뛰기, Enter는 다음 장면입니다." }));
+    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기. 책상 창은 제목을 끌어 옮기고, 오른쪽 아래 모서리로 크기를 바꿉니다. 닫기와 펼치기가 있고, 아래 칸에서 다시 엽니다. 힌트 메모를 한 장 꺼내면 그 철의 점수가 15 깎입니다. 컷이 나올 때 Esc는 건너뛰기, Enter는 다음 장면입니다." }));
     card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
   }
 
@@ -928,6 +928,29 @@
       state.mute = !state.mute;
       SR.audio.setMuted(state.mute);
       persist();
+      paint();
+      return;
+    }
+    if (name === "win-close" || name === "win-open" || name === "win-max") {
+      var winId = el.getAttribute("data-win");
+      var spec = ui.wins && ui.wins[winId];
+      if (spec) {
+        if (name === "win-close") { spec.open = false; spec.max = false; }
+        if (name === "win-open") { spec.open = true; spec.z = (ui.winZ = (ui.winZ || 5) + 1); }
+        if (name === "win-max") {
+          if (!spec.max) {
+            spec.prev = { x: spec.x, y: spec.y, w: spec.w, h: spec.h };
+            spec.max = true;
+            spec.open = true;
+          } else if (spec.prev) {
+            spec.x = spec.prev.x;
+            spec.y = spec.prev.y;
+            spec.w = spec.prev.w;
+            spec.h = spec.prev.h;
+            spec.max = false;
+          } else spec.max = false;
+        }
+      }
       paint();
       return;
     }
