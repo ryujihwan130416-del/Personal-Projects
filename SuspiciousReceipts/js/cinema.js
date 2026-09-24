@@ -60,10 +60,6 @@
     ]);
   }
 
-  function motionOff() {
-    try { return root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
-  }
-
   function seal(x, y, word, delay, cls) {
     var g = el("g", { class: cls || "anim-slam", style: delay ? "animation-delay:" + delay + "s" : null }, [
       el("circle", { cx: x, cy: y, r: "46", fill: "none", stroke: "#8f1d1d", "stroke-width": "4" }),
@@ -74,18 +70,11 @@
   }
 
   function sealOnPaper(x, y, word) {
-    var mover = el("g", {}, [
-      el("circle", { cx: "0", cy: "0", r: "44", fill: "rgba(143,29,29,0.08)", stroke: "#8f1d1d", "stroke-width": "4" }),
-      el("circle", { cx: "0", cy: "0", r: "36", fill: "none", stroke: "#8f1d1d", "stroke-width": "1.5" }),
+    return el("g", { transform: "translate(" + x + " " + y + ")" }, [
+      el("circle", { cx: "0", cy: "0", r: "42", fill: "rgba(143,29,29,0.1)", stroke: "#8f1d1d", "stroke-width": "4" }),
+      el("circle", { cx: "0", cy: "0", r: "34", fill: "none", stroke: "#8f1d1d", "stroke-width": "1.5" }),
       tx(0, 6, word, { "text-anchor": "middle", fill: "#8f1d1d", "font-size": "18", "font-weight": "800" })
     ]);
-    if (!motionOff() && mover.animate) {
-      mover.animate(
-        [{ transform: "translate(0px, 96px)" }, { transform: "translate(0px, 0px)" }],
-        { duration: 700, delay: 350, fill: "both", easing: "cubic-bezier(0.16, 0.9, 0.3, 1)" }
-      );
-    }
-    return el("g", { transform: "translate(" + x + " " + y + ")" }, [mover]);
   }
 
   var scenes = {
@@ -137,10 +126,10 @@
         el("rect", { x: "620", y: "70", width: "260", height: "200", fill: "none", stroke: "#d7b56a", "stroke-width": "4" }),
         el("rect", { x: "0", y: "400", width: "960", height: "140", fill: "#3a2a1c" }),
         el("g", { class: "anim-slide" }, [
-          paper(salt, 280, 120, 400, 250),
-          tx(480, 175, "특별조사2계", { "text-anchor": "middle", fill: "#1c1915", "font-size": "22" }),
-          tx(480, 208, "서류만 올라옵니다", { "text-anchor": "middle", fill: "#5e564c", "font-size": "16" }),
-          sealOnPaper(480, 290, "착수")
+          paper(salt, 250, 130, 460, 250),
+          tx(480, 185, "특별조사2계", { "text-anchor": "middle", fill: "#1c1915", "font-size": "22" }),
+          tx(480, 220, "야간 당직  ·  비", { "text-anchor": "middle", fill: "#5e564c", "font-size": "16" }),
+          sealOnPaper(480, 300, "착수")
         ])
       ]);
     },
@@ -248,7 +237,7 @@
         tx(200, 270, (shot && shot.lines && shot.lines[1]) || "돈의 출처는 급여가 아닙니다", { fill: "#1c1915", "font-size": "22" }),
         tx(200, 340, "결재   윤가람", { fill: "#1c1915", "font-size": "32" }),
         el("line", { x1: "190", y1: "352", x2: "470", y2: "352", stroke: "#d7a441", "stroke-width": "4", class: "anim-strike" }),
-        tx(200, 400, (shot && shot.line) || "밑줄만 치십시오. 아직 그의 사건이 아닙니다.", { fill: "#8f1d1d", "font-size": "18", class: "anim-fade-late" })
+        tx(200, 400, (shot && shot.line) || "결재란은 윤가람. 그의 밤은 아직입니다.", { fill: "#8f1d1d", "font-size": "18", class: "anim-fade-late" })
       ]);
     },
     clocks: function (salt) {
@@ -612,10 +601,10 @@
       title: "책상 하나만",
       reel: "REEL 00",
       shots: [
-        { scene: "leader", caption: "한빛지방국세청. 현장은 나가지 않습니다.", hold: 3200, cue: "tick" },
-        shot("office", "오세린 과장이 철을 책상 왼쪽에 내려놓습니다. 보는 것은 종이뿐입니다.", "paper"),
-        shot("three", "영수증, 내역서, 출입기록. 규칙은 매뉴얼 안에 있고, 현실의 세법은 쓰지 않습니다.", "tick"),
-        shot("opinion", "마지막 의견서는 하나만 고릅니다. 고른 결말마다 업적이 남고, 컷은 건너뛸 수 있습니다.", "low")
+        { scene: "leader", caption: "비가 한빛시의 창을 두드립니다.", hold: 3200, cue: "tick" },
+        shot("office", "오세린이 불을 남긴 채, 철을 책상 가운데 내려놓습니다.", "paper"),
+        shot("three", "같은 밤을 가리키는 종이가 세 장. 날짜가 서로 등을 돌립니다.", "tick"),
+        shot("opinion", "의견서는 비어 있습니다. 이름은 아직 종이 뒤에 있습니다.", "low")
       ]
     },
     case00: {
@@ -625,11 +614,11 @@
       shots: [
         card("견습", "연습 전표"),
         shot("drill", "100번은 101번보다 이를 수 없습니다. 18:40은 나중에 쓴 시각입니다.", "tick"),
-        shot("closeup", "커피 영수증은 시각이 맞습니다. 필요한 두 장만 대조합니다.", "paper", {
+        shot("closeup", "커피는 그 시각, 그 자리에 있습니다.", "paper", {
           head: "연습마트",
           lines: ["99   18:10  생수", "100  18:40  제출본", "101  18:22  보관본"]
         }),
-        shot("office", "연습은 여기까지입니다. 다음 철부터 안내가 줄어듭니다.", "stamp")
+        shot("office", "연습의 불은 여기서 꺼집니다. 밖에는 아직 비가 옵니다.", "stamp")
       ]
     },
     case01: {
@@ -660,7 +649,7 @@
           lines: ["03-04  1,200,000", "내역서  토너", "원장    얼라인먼트", "결재    윤가람"]
         }),
         shot("bars", "한 달의 부품은 실수령의 세 배를 넘습니다. 입금은 청람유통입니다.", "low"),
-        shot("approval", "결재란의 윤가람은 밑줄만 치십시오.", "tick"),
+        shot("approval", "결재란의 이름은 윤가람입니다. 그의 밤은 아직 열리지 않았습니다.", "tick"),
         shot("custody", "통장은 책상 위에 남고, 의자는 비어 있습니다.", "stamp", { name: "최민재", line: "비자금 수수" })
       ]
     },

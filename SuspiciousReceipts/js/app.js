@@ -248,10 +248,24 @@
   }
 
   function sampleReceipt() {
-    var data = SR.caseById("case01");
-    var doc = data && data.docs.filter(function (d) { return d.id === "mart"; })[0];
+    var doc = {
+      id: "title-slip",
+      kind: "receipt",
+      title: "골목등대",
+      fields: [
+        { label: "상호", value: "골목등대 분식" },
+        { label: "주소", value: "한빛시 중구 당직길 3" },
+        { label: "사업자번호", value: "305-19-44018" },
+        { label: "단말기", value: "G-02" },
+        { label: "영수증번호", value: "1184" },
+        { label: "일시", value: "2026-03-02 02:16" },
+        { label: "품목", value: "김밥 1  우동 1" },
+        { label: "결제", value: "현금" },
+        { label: "합계", value: "7,000원" }
+      ]
+    };
     var slip = h("aside", { class: "sample-receipt", "aria-hidden": "true" });
-    if (doc) slip.appendChild(SR.dom.paper(doc));
+    slip.appendChild(SR.dom.paper(doc));
     return slip;
   }
 

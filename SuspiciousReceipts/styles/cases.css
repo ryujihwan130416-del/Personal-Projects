@@ -46,10 +46,12 @@
     #2a211b;
 }
 .folder-grid {
+  width: min(1440px, 100%);
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.1rem 0.9rem;
-  padding: 1.2rem 1rem 1.4rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem 1rem;
+  padding: 1.3rem 1.4rem 1.6rem;
 }
 .folder {
   text-align: left;
@@ -119,6 +121,9 @@
   background: rgba(244, 234, 217, 0.92);
 }
 
+@media (max-width: 1100px) {
+  .folder-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 900px) {
   .folder-grid { grid-template-columns: 1fr; }
   .title-screen { grid-template-columns: 1fr; }
