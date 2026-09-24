@@ -60,8 +60,8 @@
     ]);
   }
 
-  function seal(x, y, word, delay) {
-    var g = el("g", { class: "anim-slam", style: delay ? "animation-delay:" + delay + "s" : null }, [
+  function seal(x, y, word, delay, cls) {
+    var g = el("g", { class: cls || "anim-slam", style: delay ? "animation-delay:" + delay + "s" : null }, [
       el("circle", { cx: x, cy: y, r: "46", fill: "none", stroke: "#8f1d1d", "stroke-width": "4" }),
       el("circle", { cx: x, cy: y, r: "38", fill: "none", stroke: "#8f1d1d", "stroke-width": "1.5" }),
       tx(x, y + 6, word, { "text-anchor": "middle", fill: "#8f1d1d", "font-size": "18", "font-weight": "800" })
@@ -118,11 +118,11 @@
         el("rect", { x: "620", y: "70", width: "260", height: "200", fill: "none", stroke: "#d7b56a", "stroke-width": "4" }),
         el("rect", { x: "0", y: "390", width: "960", height: "150", fill: "#3a2a1c" }),
         el("g", { class: "anim-slide" }, [
-          paper(salt, 360, 250, 280, 170),
-          tx(500, 320, "특별조사2계", { "text-anchor": "middle", fill: "#1c1915", "font-size": "22" }),
-          tx(500, 356, "서류만 올라옵니다", { "text-anchor": "middle", fill: "#5e564c", "font-size": "16" })
+          paper(salt, 300, 230, 360, 200),
+          tx(400, 290, "특별조사2계", { "text-anchor": "middle", fill: "#1c1915", "font-size": "22" }),
+          tx(400, 322, "서류만 올라옵니다", { "text-anchor": "middle", fill: "#5e564c", "font-size": "16" })
         ]),
-        seal(690, 300, "착수", 1.2)
+        seal(560, 375, "착수", 0.35, "anim-rise")
       ]);
     },
     receiptClock: function (salt) {
@@ -180,7 +180,7 @@
           el("ellipse", { cx: "560", cy: "330", rx: "70", ry: "36", fill: "none", stroke: "#8f1d1d", "stroke-width": "3", transform: "rotate(-8 560 330)" }),
           tx(560, 338, "청람", { "text-anchor": "middle", fill: "#8f1d1d", "font-size": "28" })
         ]),
-        tx(480, 430, "아직 이름만 남습니다", { "text-anchor": "middle", fill: "#f4ead9", "font-size": "20", class: "anim-fade-later" })
+        tx(480, 470, "아직 이름만 남습니다", { "text-anchor": "middle", fill: "#f4ead9", "font-size": "20", class: "anim-fade-later" })
       ]);
     },
     peel: function (salt) {
@@ -194,7 +194,7 @@
           tx(220, 255, "토너 및 소모품", { fill: "#1c1915", "font-size": "32" })
         ]),
         tx(220, 340, "같은 돈입니다. 계정만 바뀌었습니다.", { fill: "#8f1d1d", "font-size": "20", class: "anim-fade-later" }),
-        el("g", { transform: "translate(700 180)", class: "anim-fade-late" }, [
+        el("g", { transform: "translate(640 168)", class: "anim-fade-late" }, [
           el("circle", { cx: "0", cy: "40", r: "34", fill: "none", stroke: "#1c1915", "stroke-width": "6" }),
           el("rect", { x: "-8", y: "70", width: "16", height: "40", fill: "#1c1915" }),
           tx(0, 150, "부품", { "text-anchor": "middle", fill: "#1c1915", "font-size": "16" })
@@ -297,9 +297,9 @@
       return svg(salt, [
         el("rect", { width: "960", height: "540", fill: "#120e0c" }),
         el("rect", { x: "180", y: "140", width: "600", height: "180", fill: "#1a120e", stroke: "#d7a441", "stroke-width": "6" }),
-        tx(480, 230, "금강루", { "text-anchor": "middle", fill: "#f4ead9", "font-size": "64", class: "anim-out", style: "animation-delay:0.45s" }),
-        tx(480, 220, "청람유통", { "text-anchor": "middle", fill: "#f4ead9", "font-size": "52", class: "anim-fade-late", style: "animation-delay:0.7s" }),
-        tx(480, 278, "도소매  ·  서구 창고길 9", { "text-anchor": "middle", fill: "#e7c27a", "font-size": "20", class: "anim-fade-late", style: "animation-delay:1s" }),
+        tx(480, 200, "금강루", { "text-anchor": "middle", fill: "#f4ead9", "font-size": "48", class: "anim-out", style: "animation-delay:0.7s" }),
+        tx(480, 262, "청람유통", { "text-anchor": "middle", fill: "#f4ead9", "font-size": "42", class: "anim-fade-late", style: "animation-delay:0.85s" }),
+        tx(480, 300, "도소매  ·  서구 창고길 9", { "text-anchor": "middle", fill: "#e7c27a", "font-size": "18", class: "anim-fade-late", style: "animation-delay:1s" }),
         tx(480, 400, "814-22-01937", { "text-anchor": "middle", fill: "#d7a441", "font-size": "28", "font-family": "ui-monospace, monospace", class: "anim-fade-late", style: "animation-delay:1s" })
       ]);
     },
@@ -327,8 +327,8 @@
         slip(salt, 650, "입금", "6,000,000"),
         el("path", { d: "M250 270 H340", stroke: "#8f1d1d", "stroke-width": "3", class: "anim-draw" }),
         el("path", { d: "M540 270 H630", stroke: "#8f1d1d", "stroke-width": "3", class: "anim-draw", style: "animation-delay:0.4s" }),
-        tx(480, 430, "예금주  청람유통", { "text-anchor": "middle", fill: "#f4ead9", "font-size": "26", class: "anim-fade-late" }),
-        tx(480, 440, "도장  윤가람", { "text-anchor": "middle", fill: "#e7c27a", "font-size": "22", class: "anim-fade-later" })
+        tx(480, 400, "예금주  청람유통", { "text-anchor": "middle", fill: "#f4ead9", "font-size": "26", class: "anim-fade-late" }),
+        tx(480, 448, "도장  윤가람", { "text-anchor": "middle", fill: "#e7c27a", "font-size": "22", class: "anim-fade-later" })
       ]);
     },
     pile: function (salt) {
@@ -505,6 +505,49 @@
         el("g", { class: "anim-fade-later" }, bars)
       ]);
     },
+    fact: function (salt, shot, opts) {
+      var lines = (opts && opts.lines) || (shot && shot.lines) || [];
+      var head = (opts && opts.head) || (shot && shot.head) || "사실";
+      var body = lines.slice(0, 4).map(function (line, n) {
+        return tx(210, 180 + n * 44, line, {
+          fill: "#1c1915",
+          "font-size": "22",
+          "font-family": "ui-monospace, monospace",
+          class: n ? "anim-fade-late" : null,
+          style: n ? "animation-delay:" + (0.15 * n) + "s" : null
+        });
+      });
+      return svg(salt, [
+        el("rect", { width: "960", height: "540", fill: "#14110e" }),
+        paper(salt, 160, 70, 640, 380),
+        tx(200, 125, head, { fill: "#8f1d1d", "font-size": "18" }),
+        el("g", {}, body),
+        seal(700, 390, "정정", 0.4, "anim-rise")
+      ]);
+    },
+    custody: function (salt, shot) {
+      var name = (shot && shot.name) || "";
+      var line = (shot && shot.line) || "";
+      return svg(salt, [
+        el("rect", { width: "960", height: "540", fill: "#100e0c" }),
+        el("rect", { x: "70", y: "40", width: "90", height: "250", fill: "#1c1814" }),
+        el("rect", { x: "78", y: "70", width: "36", height: "48", fill: "#cbb892" }),
+        el("rect", { x: "0", y: "360", width: "960", height: "180", fill: "#2a2118" }),
+        el("rect", { x: "250", y: "300", width: "460", height: "28", fill: "#4a3424" }),
+        el("rect", { x: "180", y: "150", width: "16", height: "150", fill: "#3a2e24" }),
+        el("rect", { x: "150", y: "150", width: "70", height: "14", rx: "3", fill: "#3a2e24" }),
+        el("path", { d: "M168 150 C 210 120, 250 170, 230 210", fill: "#1f4d3a", opacity: "0.9" }),
+        el("g", { transform: "translate(620 250)" }, [
+          el("circle", { cx: "0", cy: "0", r: "16", fill: "none", stroke: "#cbb892", "stroke-width": "4" }),
+          el("circle", { cx: "28", cy: "8", r: "16", fill: "none", stroke: "#cbb892", "stroke-width": "4" }),
+          el("line", { x1: "12", y1: "6", x2: "16", y2: "4", stroke: "#cbb892", "stroke-width": "4" })
+        ]),
+        paper(salt, 280, 140, 400, 200),
+        tx(310, 195, name, { fill: "#1c1915", "font-size": "28" }),
+        tx(310, 230, line, { fill: "#5e564c", "font-size": "16" }),
+        seal(590, 290, "소환", 0.45, "anim-rise")
+      ]);
+    },
     stamp: function (salt, shot) {
       var word = (shot && shot.word) || "마감";
       return svg(salt, [
@@ -582,7 +625,8 @@
           lines: ["4819  21:02  생수", "4820  22:14  제출본", "4820  공란   보관본", "4821  21:40  김밥"]
         }),
         shot("coast", "게이트는 그를 본사 안에 두고, 카드는 남해에 둡니다.", "low"),
-        shot("fish", "횟집 메모의 청람은 아직 이름만 남습니다.", "paper")
+        shot("fish", "횟집 메모의 청람은 아직 이름만 남습니다.", "paper"),
+        shot("custody", "빈 의자와 소환 도장만 남습니다. 사람은 이미 그 방을 나섰습니다.", "stamp", { name: "박도윤", line: "허위 야근" })
       ]
     },
     case02: {
@@ -597,7 +641,8 @@
           lines: ["03-04  1,200,000", "내역서  토너", "원장    얼라인먼트", "결재    윤가람"]
         }),
         shot("bars", "한 달의 부품은 실수령의 세 배를 넘습니다. 입금은 청람유통입니다.", "low"),
-        shot("approval", "결재란의 윤가람은 밑줄만 치십시오.", "tick")
+        shot("approval", "결재란의 윤가람은 밑줄만 치십시오.", "tick"),
+        shot("custody", "통장은 책상 위에 남고, 의자는 비어 있습니다.", "stamp", { name: "최민재", line: "비자금 수수" })
       ]
     },
     case03: {
@@ -615,7 +660,8 @@
         shot("approval", "42만 원의 결재란은 또 윤가람입니다. 구내식당까지는 진짜입니다.", "low", {
           lines: ["구내식당까지는 진짜입니다", "42만 원만 거짓입니다"],
           line: "결재는 윤가람입니다."
-        })
+        }),
+        shot("custody", "가짜 식대는 접히고, 그 이름의 자리는 비었습니다.", "stamp", { name: "한서준", line: "허위 경비" })
       ]
     },
     case04: {
@@ -629,7 +675,8 @@
           head: "금강루",
           lines: ["스테이크  6", "서명     18", "김하늘  북원 영화", "남민준  북원 주유"]
         }),
-        shot("signflip", "간판은 금강루이고, 등록은 청람유통입니다. 주소는 창고입니다.", "low")
+        shot("signflip", "간판은 금강루이고, 등록은 청람유통입니다. 주소는 창고입니다.", "low"),
+        shot("custody", "서명부는 남고, 청구한 사람의 의자는 비었습니다.", "stamp", { name: "윤가람", line: "허위 회식" })
       ]
     },
     case05: {
@@ -643,7 +690,8 @@
           head: "자문  6,000,000",
           lines: ["계약서  6,000,000", "이체    6,000,000", "입금    6,000,000", "예금주  청람유통"]
         }),
-        shot("pipe", "같은 금액이 계약과 이체와 입금을 통과합니다. 도장은 윤가람입니다.", "low")
+        shot("pipe", "같은 금액이 계약과 이체와 입금을 통과합니다. 도장은 윤가람입니다.", "low"),
+        shot("custody", "빈 보고서가 접히고, 결재한 사람의 자리만 남습니다.", "stamp", { name: "윤가람", line: "허위 자문" })
       ]
     },
     case06: {
@@ -664,6 +712,7 @@
       shots: [
         card("의견서", "결재만 남다"),
         shot("endNarrow", "첫 문장만 남습니다. 사업자번호는 비어 있습니다.", "paper"),
+        shot("custody", "결재란의 이름이 빈 의자 앞에 놓입니다.", "stamp", { name: "윤가람", line: "결재" }),
         shot("stamp", "도장은 반만 찍힙니다.", "stamp", { word: "결재" })
       ]
     },
@@ -674,6 +723,7 @@
       shots: [
         card("의견서", "창고의 번호"),
         shot("endCompany", "814-22-01937이 의견서 가운데로 들어옵니다.", "tick"),
+        shot("custody", "창고 번호와 함께, 도장을 찍은 사람의 자리가 비었습니다.", "stamp", { name: "윤가람", line: "청람유통" }),
         shot("stamp", "창고의 번호까지 찍습니다.", "stamp", { word: "청람" })
       ]
     },
@@ -684,6 +734,7 @@
       shots: [
         card("의견서", "항만까지"),
         shot("endFull", "결재는 윤가람, 주머니는 청람유통, 그 밤의 이니셜은 ㅂㄷㅇ.", "low"),
+        shot("custody", "의견서가 접히고, 결재한 사람의 의자만 남습니다.", "stamp", { name: "윤가람", line: "항만까지" }),
         shot("stamp", "오늘 보고서는 여기까지입니다.", "stamp", { word: "마감" })
       ]
     },
@@ -694,6 +745,7 @@
       shots: [
         card("의견서", "특별조사"),
         shot("endSpecial", "본철 밖의 쪽지까지 센 뒤, 철을 다른 칸으로 옮깁니다.", "paper"),
+        shot("custody", "쪽지까지 센 철이 빈 의자 앞으로 옮겨집니다.", "stamp", { name: "윤가람", line: "특별조사" }),
         shot("stamp", "특별조사. 이 책상의 일은 여기서 넘깁니다.", "stamp", { word: "특별" })
       ]
     },
@@ -707,14 +759,23 @@
         shot("stamp", "보류 도장만 남습니다.", "stamp", { word: "보류" })
       ]
     },
+    miss: {
+      kicker: "반려",
+      title: "사실",
+      reel: "FACT",
+      shots: [
+        card("사실", "보고서가 돌아왔습니다"),
+        shot("fact", function (opts) { return opts.caption || "서류가 가리키는 사실을 읽으십시오."; }, "paper")
+      ]
+    },
     "ending-wrong": {
-      kicker: "의견서",
-      title: "오판",
+      kicker: "사실",
+      title: "이름이 다릅니다",
       reel: "END 06",
       shots: [
-        card("의견서", "오판"),
-        shot("endWrong", function (opts) { return (opts.who || "그 이름") + ". " + (opts.alibi || "정점의 이름이 아닙니다."); }, "reject"),
-        shot("stamp", "의견서는 폐기되고, 철은 오판으로 닫힙니다.", "stamp", { word: "폐기" })
+        card("사실", "정점이 아닙니다"),
+        shot("fact", function (opts) { return opts.alibi || "서류의 이름과 도장의 이름이 다릅니다."; }, "paper"),
+        shot("stamp", "의견서는 그 사실 위에서 닫힙니다.", "stamp", { word: "정정" })
       ]
     }
   };
@@ -933,9 +994,33 @@
     return errors;
   }
 
+  function still(host, id, index, opts) {
+    var seq = SEQ[id];
+    if (!host || !seq || !seq.shots[index]) return null;
+    host.textContent = "";
+    var row = seq.shots[index];
+    var node;
+    if (row.card) {
+      node = html("div", { class: "cine-card shot on" }, [
+        html("p", { class: "kicker light" }),
+        html("h2", {})
+      ]);
+      node.querySelector(".kicker").textContent = row.kicker;
+      node.querySelector("h2").textContent = row.title;
+    } else {
+      node = html("div", { class: "shot on" });
+      node.appendChild(scenes[row.scene]("still" + id + index, row, opts || {}));
+    }
+    host.appendChild(node);
+    return { kicker: seq.kicker, title: seq.title, scene: row.scene || "card", caption: captionOf(row, opts || {}) };
+  }
+
   SR.cinema = {
     has: function (id) { return !!SEQ[id]; },
     run: run,
-    lint: lint
+    lint: lint,
+    still: still,
+    ids: function () { return Object.keys(SEQ); },
+    length: function (id) { return SEQ[id] ? SEQ[id].shots.length : 0; }
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);
