@@ -124,12 +124,25 @@
         el("g", { "clip-path": "url(#" + salt + "-win)" }, rain),
         tx(750, 168, "한빛", { "text-anchor": "middle", fill: "#e7c27a", "font-size": "20", class: "anim-flicker" }),
         el("rect", { x: "620", y: "70", width: "260", height: "200", fill: "none", stroke: "#d7b56a", "stroke-width": "4" }),
-        el("rect", { x: "0", y: "400", width: "960", height: "140", fill: "#3a2a1c" }),
+        el("rect", { x: "0", y: "430", width: "960", height: "110", fill: "#3a2a1c" }),
         el("g", { class: "anim-slide" }, [
-          paper(salt, 250, 130, 460, 250),
-          tx(480, 185, "특별조사2계", { "text-anchor": "middle", fill: "#1c1915", "font-size": "22" }),
-          tx(480, 220, "야간 당직  ·  비", { "text-anchor": "middle", fill: "#5e564c", "font-size": "16" }),
-          sealOnPaper(480, 300, "착수")
+          el("path", {
+            d: "M340 78 L348 90 L356 78 L364 90 L372 78 L380 90 L388 78 L396 90 L404 78 L412 90 L420 78 L428 90 L436 78 L444 90 L452 78 L460 90 L468 78 L476 90 L484 78 L492 90 L500 78 L508 90 L516 78 L524 90 L532 78 L540 90 L548 78 L556 90 L564 78 L572 90 L580 78 L588 90 L596 78 L604 90 L612 78 L620 90 L620 400 L612 412 L604 400 L596 412 L588 400 L580 412 L572 400 L564 412 L556 400 L548 412 L540 400 L532 412 L524 400 L516 412 L508 400 L500 412 L492 400 L484 412 L476 400 L468 412 L460 400 L452 412 L444 400 L436 412 L428 400 L420 412 L412 400 L404 412 L396 400 L388 412 L380 400 L372 412 L364 400 L356 412 L348 400 L340 412 Z",
+            fill: "#f4f1ea"
+          }),
+          tx(480, 128, "골목등대", { "text-anchor": "middle", fill: "#1c1915", "font-size": "26", "font-weight": "800" }),
+          tx(480, 154, "분식  ·  영수증", { "text-anchor": "middle", fill: "#5e564c", "font-size": "14" }),
+          el("line", { x1: "370", y1: "170", x2: "590", y2: "170", stroke: "#1c1915", "stroke-width": "1", "stroke-dasharray": "4 3" }),
+          tx(370, 198, "2026-03-02  02:16", { fill: "#1c1915", "font-size": "15", "font-family": "ui-monospace, monospace" }),
+          tx(370, 226, "김밥 1", { fill: "#1c1915", "font-size": "16", "font-family": "ui-monospace, monospace" }),
+          tx(590, 226, "3,500", { "text-anchor": "end", fill: "#1c1915", "font-size": "16", "font-family": "ui-monospace, monospace" }),
+          tx(370, 252, "우동 1", { fill: "#1c1915", "font-size": "16", "font-family": "ui-monospace, monospace" }),
+          tx(590, 252, "3,500", { "text-anchor": "end", fill: "#1c1915", "font-size": "16", "font-family": "ui-monospace, monospace" }),
+          el("line", { x1: "370", y1: "268", x2: "590", y2: "268", stroke: "#1c1915", "stroke-width": "1", "stroke-dasharray": "4 3" }),
+          tx(370, 294, "합계", { fill: "#1c1915", "font-size": "18", "font-weight": "800" }),
+          tx(590, 294, "7,000", { "text-anchor": "end", fill: "#1c1915", "font-size": "18", "font-weight": "800" }),
+          tx(480, 318, "현금", { "text-anchor": "middle", fill: "#5e564c", "font-size": "14" }),
+          sealOnPaper(480, 352, "착수")
         ])
       ]);
     },
