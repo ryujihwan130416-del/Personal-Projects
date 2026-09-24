@@ -59,30 +59,93 @@
 }
 .coach p { margin: 0; }
 
-.desk-body {
+.desk-stage {
+  position: relative;
   flex: 1;
   min-height: 0;
-  width: min(1440px, 100%);
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: minmax(200px, 18vw) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 0.85rem 1.1rem;
-  padding: 0.85rem 1.4rem 0.5rem;
+  margin: 0.45rem 0.7rem 0.35rem;
 }
-.list-col { grid-column: 1; grid-row: 1; }
-.read-col { grid-column: 2; grid-row: 1; }
-.side-col {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.8fr);
-  gap: 1rem;
-  max-height: 24vh;
+.gwin {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  min-height: 180px;
+  background: rgba(28, 22, 17, 0.94);
+  border: 1px solid rgba(244, 234, 217, 0.32);
+  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.46);
 }
-.side-col h2 { margin-top: 0; }
-.side-col .timeline,
-.side-col .found-list { max-height: 16vh; }
+.gwin.shut { display: none; }
+.gwin-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 36px;
+  padding: 0.2rem 0.35rem 0.2rem 0.7rem;
+  background: linear-gradient(180deg, #5a4634, #2a211b);
+  color: #f4ead9;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.gwin-title { font-weight: 800; letter-spacing: 0.08em; }
+.gwin-tools { display: flex; gap: 0.3rem; }
+.gwin-tool {
+  appearance: none;
+  border: 1px solid rgba(244, 234, 217, 0.45);
+  background: transparent;
+  color: #f4ead9;
+  min-height: 28px;
+  padding: 0 0.45rem;
+  cursor: pointer;
+}
+.gwin-x { border-color: rgba(143, 29, 29, 0.8); color: #f0c2c2; }
+.gwin-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.gwin-body > .col,
+.gwin-body > .compare { flex: 1; min-height: 0; height: auto; width: auto; max-height: none; margin: 0; }
+.gwin-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.gwin-resize::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #e7c27a;
+  border-bottom: 2px solid #e7c27a;
+}
+.gwin-dock {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  display: flex;
+  gap: 0.4rem;
+  z-index: 40;
+}
+.gwin-dock-btn {
+  appearance: none;
+  min-height: 36px;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(244, 234, 217, 0.35);
+  background: rgba(16, 12, 9, 0.72);
+  color: #cbbfa8;
+  cursor: pointer;
+}
+.gwin-dock-btn.on {
+  background: #f4ead9;
+  color: #1c1915;
+  border-color: #f4ead9;
+}
 .col {
   min-height: 0;
   display: flex;
@@ -105,6 +168,7 @@
 }
 .search { grid-column: 1 / -1; }
 .doc-list, .timeline, .found-list, .paper-stage { overflow: auto; min-height: 0; }
+.gwin .doc-list, .gwin .timeline, .gwin .found-list, .gwin .paper-stage { flex: 1; }
 .doc-list { display: grid; align-content: start; gap: 0.35rem; }
 .doc-item {
   text-align: left;
@@ -172,15 +236,11 @@
 .found-list { flex: 1; }
 
 .compare {
-  width: min(1440px, 100%);
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.7rem;
-  align-items: start;
-  padding: 0.55rem 1.4rem 0.75rem;
-  background: rgba(0, 0, 0, 0.28);
-  max-height: 28vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.55rem 0.7rem 0.8rem;
+  background: transparent;
   overflow: auto;
 }
 .compare h2 { margin: 0.2rem 0 0; font-size: 0.9rem; }
@@ -191,14 +251,6 @@
 .check { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.45rem 0; }
 .check input { margin-top: 0.25rem; }
 
-@media (max-width: 1100px) {
-  .desk { height: auto; min-height: 100vh; }
-  .desk-body { grid-template-columns: 1fr; grid-template-rows: auto; }
-  .list-col, .read-col, .side-col { grid-column: 1; grid-row: auto; max-height: none; }
-  .side-col { display: flex; flex-direction: column; }
-  .side-col .timeline, .side-col .found-list { max-height: 220px; }
-  .doc-list { max-height: 280px; }
-  .compare { grid-template-columns: 1fr; max-height: none; }
-  .slots { flex-direction: column; }
-  .slot { width: 100%; }
-}
+.slots { flex-direction: column; }
+.slot { width: 100%; }
+.file-form { width: 100%; }

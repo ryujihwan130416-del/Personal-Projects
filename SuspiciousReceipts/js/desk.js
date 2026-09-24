@@ -75,13 +75,173 @@
     desk.appendChild(header(data, prog, haveNeed, need.length, closed, step));
     if (step) desk.appendChild(coach(step.text));
 
-    var body = h("div", { class: "desk-body" });
-    body.appendChild(listCol(data, list, ui, state, step));
-    body.appendChild(readCol(data, open, state, closed, ui, step));
-    body.appendChild(sideCol(data, prog, closed));
-    desk.appendChild(body);
-    desk.appendChild(compareCol(data, ui, closed, step));
+    var stage = h("div", { class: "desk-stage" });
+    stage.appendChild(frame(ui, "list", "서류", listCol(data, list, ui, state, step)));
+    stage.appendChild(frame(ui, "read", "열람", readCol(data, open, state, closed, ui, step)));
+    stage.appendChild(frame(ui, "time", "시각", timeCol(data)));
+    stage.appendChild(frame(ui, "found", "지적", foundCol(data, prog, closed)));
+    stage.appendChild(frame(ui, "compare", "대조", compareCol(data, ui, closed, step)));
+    stage.appendChild(dock(ui));
+    desk.appendChild(stage);
     parent.appendChild(desk);
+    bindWindows(stage, ui);
+  }
+
+  var WIN_IDS = ["list", "read", "time", "found", "compare"];
+
+  function ensureWins(ui) {
+    if (ui.wins) return;
+    ui.winZ = 5;
+    ui.wins = {
+      list: { x: 16, y: 16, w: 300, h: 420, z: 2, open: true, max: false },
+      read: { x: 330, y: 16, w: 640, h: 520, z: 3, open: true, max: false },
+      time: { x: 16, y: 450, w: 460, h: 240, z: 2, open: true, max: false },
+      found: { x: 490, y: 450, w: 480, h: 240, z: 2, open: true, max: false },
+      compare: { x: 990, y: 16, w: 340, h: 520, z: 2, open: true, max: false }
+    };
+  }
+
+  function frame(ui, id, title, body) {
+    ensureWins(ui);
+    var spec = ui.wins[id];
+    var win = h("section", {
+      class: "gwin" + (spec.open ? "" : " shut") + (spec.max ? " max" : ""),
+      "data-win": id
+    });
+    win.appendChild(h("div", { class: "gwin-bar" }, [
+      h("span", { class: "gwin-title", text: title }),
+      h("span", { class: "gwin-tools" }, [
+        h("button", {
+          class: "gwin-tool",
+          type: "button",
+          "data-action": "win-max",
+          "data-win": id,
+          text: spec.max ? "접기" : "펼치기"
+        }),
+        h("button", {
+          class: "gwin-tool gwin-x",
+          type: "button",
+          "data-action": "win-close",
+          "data-win": id,
+          text: "닫기"
+        })
+      ])
+    ]));
+    var hold = h("div", { class: "gwin-body" });
+    hold.appendChild(body);
+    win.appendChild(hold);
+    win.appendChild(h("div", { class: "gwin-resize", title: "끌어서 크기 조절" }));
+    return win;
+  }
+
+  function dock(ui) {
+    ensureWins(ui);
+    var names = { list: "서류", read: "열람", time: "시각", found: "지적", compare: "대조" };
+    var bar = h("nav", { class: "gwin-dock", "aria-label": "창" });
+    WIN_IDS.forEach(function (id) {
+      var on = ui.wins[id].open;
+      bar.appendChild(h("button", {
+        class: "gwin-dock-btn" + (on ? " on" : ""),
+        type: "button",
+        "data-action": "win-open",
+        "data-win": id,
+        text: names[id]
+      }));
+    });
+    return bar;
+  }
+
+  function applyGeom(win, spec) {
+    win.style.left = spec.x + "px";
+    win.style.top = spec.y + "px";
+    win.style.width = spec.w + "px";
+    win.style.height = spec.h + "px";
+    win.style.zIndex = String(spec.z || 1);
+  }
+
+  function bindWindows(stage, ui) {
+    ensureWins(ui);
+    var rect = stage.getBoundingClientRect();
+    if (rect.width > 200 && !ui.winsFit) {
+      var w = rect.width;
+      var hgt = rect.height;
+      var dockH = 58;
+      ui.wins.list = { x: 12, y: 12, w: Math.round(w * 0.22), h: Math.round(hgt - dockH - 16), z: 2, open: true, max: false };
+      ui.wins.read = { x: Math.round(w * 0.24), y: 12, w: Math.round(w * 0.5), h: Math.round(hgt - dockH - 16), z: 2, open: true, max: false };
+      ui.wins.compare = { x: Math.round(w * 0.75), y: 12, w: Math.round(w * 0.23), h: Math.round(hgt - dockH - 16), z: 2, open: true, max: false };
+      ui.wins.time = { x: Math.round(w * 0.26), y: Math.round(hgt * 0.4), w: Math.round(w * 0.26), h: Math.max(200, Math.round(hgt * 0.4)), z: 6, open: true, max: false };
+      ui.wins.found = { x: Math.round(w * 0.5), y: Math.round(hgt * 0.44), w: Math.round(w * 0.24), h: Math.max(200, Math.round(hgt * 0.36)), z: 7, open: true, max: false };
+      ui.winsFit = true;
+    }
+    if (rect.width > 200) {
+      WIN_IDS.forEach(function (id) {
+        var spec = ui.wins[id];
+        if (spec.max && spec.open) {
+          spec.x = 10;
+          spec.y = 10;
+          spec.w = Math.max(280, Math.round(rect.width - 20));
+          spec.h = Math.max(200, Math.round(rect.height - 72));
+        }
+      });
+    }
+    stage.querySelectorAll(".gwin").forEach(function (win) {
+      var id = win.getAttribute("data-win");
+      var spec = ui.wins[id];
+      if (spec.open) applyGeom(win, spec);
+      var bar = win.querySelector(".gwin-bar");
+      var grip = win.querySelector(".gwin-resize");
+      bar.addEventListener("pointerdown", function (e) {
+        if (e.target.closest("button")) return;
+        e.preventDefault();
+        raiseWin(ui, id, stage);
+        if (spec.max) spec.max = false;
+        var sx = e.clientX;
+        var sy = e.clientY;
+        var ox = spec.x;
+        var oy = spec.y;
+        bar.setPointerCapture(e.pointerId);
+        function move(ev) {
+          spec.x = Math.max(0, Math.min(stage.clientWidth - 120, ox + ev.clientX - sx));
+          spec.y = Math.max(0, Math.min(stage.clientHeight - 64, oy + ev.clientY - sy));
+          applyGeom(win, spec);
+        }
+        function up() {
+          bar.removeEventListener("pointermove", move);
+          bar.removeEventListener("pointerup", up);
+        }
+        bar.addEventListener("pointermove", move);
+        bar.addEventListener("pointerup", up);
+      });
+      grip.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        raiseWin(ui, id, stage);
+        spec.max = false;
+        var sx = e.clientX;
+        var sy = e.clientY;
+        var ow = spec.w;
+        var oh = spec.h;
+        grip.setPointerCapture(e.pointerId);
+        function move(ev) {
+          spec.w = Math.max(240, Math.min(stage.clientWidth - spec.x, ow + ev.clientX - sx));
+          spec.h = Math.max(180, Math.min(stage.clientHeight - spec.y - 8, oh + ev.clientY - sy));
+          applyGeom(win, spec);
+        }
+        function up() {
+          grip.removeEventListener("pointermove", move);
+          grip.removeEventListener("pointerup", up);
+        }
+        grip.addEventListener("pointermove", move);
+        grip.addEventListener("pointerup", up);
+      });
+    });
+  }
+
+  function raiseWin(ui, id, stage) {
+    ui.winZ = (ui.winZ || 5) + 1;
+    ui.wins[id].z = ui.winZ;
+    var win = stage.querySelector('.gwin[data-win="' + id + '"]');
+    if (win) win.style.zIndex = String(ui.winZ);
   }
 
   function tutorialDone(step, data, ui, prog, state) {
@@ -144,7 +304,6 @@
   function listCol(data, list, ui, state, step) {
     var dates = datesOf(data);
     var col = h("aside", { class: "col list-col" });
-    col.appendChild(h("h2", { text: "서류" }));
     var tools = h("div", { class: "filters" });
     tools.appendChild(select("filter-person", "사람", [{ value: "", label: "전체" }].concat(data.people.map(function (p) {
       return { value: p.id, label: p.name };
@@ -229,9 +388,8 @@
     return col;
   }
 
-  function sideCol(data, prog, closed) {
-    var col = h("aside", { class: "col side-col" });
-    col.appendChild(h("h2", { text: "타임라인" }));
+  function timeCol(data) {
+    var col = h("aside", { class: "col time-col" });
     var time = h("div", { class: "timeline", "data-scroll": "time" });
     var rows = marksOf(data);
     var lastDate = "";
@@ -252,7 +410,11 @@
       ]));
     });
     col.appendChild(time);
-    col.appendChild(h("h2", { text: "인정된 지적" }));
+    return col;
+  }
+
+  function foundCol(data, prog, closed) {
+    var col = h("aside", { class: "col found-col" });
     var found = h("div", { class: "found-list", "data-scroll": "found" });
     if (!prog.found.length) found.appendChild(h("p", { class: "empty", text: "아직 없습니다." }));
     prog.found.forEach(function (id) {
@@ -286,7 +448,6 @@
 
   function compareCol(data, ui, closed, step) {
     var bar = h("footer", { class: "compare" });
-    bar.appendChild(h("h2", { text: "대조" }));
     var slots = h("div", { class: "slots" });
     if (!ui.pins.length) slots.appendChild(h("p", { class: "empty", text: "최대 3장. 모순에 필요한 서류만 올리십시오." }));
     ui.pins.forEach(function (id) {
