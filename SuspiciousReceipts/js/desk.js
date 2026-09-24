@@ -79,8 +79,8 @@
     var view = h("div", { class: "desk-view" });
     var world = h("div", { class: "desk-world" });
     var plane = h("div", { class: "desk-plane" });
-    plane.appendChild(props());
-    plane.appendChild(notebook(ui));
+    plane.appendChild(props(state));
+    plane.appendChild(notebook());
     plane.appendChild(laptop());
     plane.appendChild(drawer(data, list, ui, step));
     var shown = {};
@@ -131,23 +131,65 @@
     }
   }
 
-  function props() {
-    return h("div", { class: "scenery" }, [
-      h("button", { type: "button", class: "mug-set", "data-action": "egg", "data-egg": "coffee", "aria-label": "커피" }, [
+  function props(state) {
+    var bits = [];
+    if (!state.coffeeGone) {
+      bits.push(h("button", { type: "button", class: "mug-set", "data-action": "egg", "data-egg": "coffee", "aria-label": "커피" }, [
         h("div", { class: "saucer" }),
         h("div", { class: "cup" }, [h("div", { class: "coffee" })])
-      ]),
-      h("div", { class: "pen", "aria-hidden": "true" }),
-      h("button", { type: "button", class: "pencil", "data-action": "egg", "data-egg": "pencil", "aria-label": "노란 연필" }),
-      h("div", { class: "pencil spare", "aria-hidden": "true" }),
-      h("button", { type: "button", class: "eraser", "data-action": "egg", "data-egg": "eraser", "aria-label": "지우개" })
+      ]));
+    }
+    bits.push(h("div", { class: "pen", "aria-hidden": "true" }));
+    bits.push(h("button", {
+      type: "button",
+      class: "pencil" + (state.pencilBroken ? " broken" : ""),
+      "data-action": "egg",
+      "data-egg": "pencil",
+      "aria-label": "노란 연필"
+    }));
+    if (state.pencilBroken) bits.push(h("span", { class: "pencil-bit", "aria-hidden": "true" }));
+    bits.push(h("div", { class: "pencil spare", "aria-hidden": "true" }));
+    bits.push(h("button", { type: "button", class: "eraser", "data-action": "egg", "data-egg": "eraser", "aria-label": "지우개" }));
+    return h("div", { class: "scenery" }, bits);
+  }
+
+  function notebook() {
+    return h("button", { type: "button", class: "nb", "data-action": "notebook", "aria-label": "수첩" }, [
+      h("span", { class: "nb-band" }),
+      h("span", { class: "nb-label", text: "수첩" })
     ]);
   }
 
-  function notebook(ui) {
-    return h("button", { type: "button", class: "nb", "data-action": "note-open", "aria-label": "공책 메모" }, [
-      h("span", { class: "nb-band" }),
-      h("span", { class: "nb-label", text: ui.noteOpen ? "메모" : "공책" })
+  function keyRow(widths) {
+    return h("div", { class: "key-row" }, widths.map(function (w) {
+      if (!w) return h("i", { class: "key-gap" });
+      return h("i", { class: "key" + (w > 1.5 ? " wide" : ""), style: "flex:" + w + " 1 0" });
+    }));
+  }
+
+  function keyboard() {
+    return h("div", { class: "pc-board", "aria-hidden": "true" }, [
+      h("div", { class: "pc-main" }, [
+        keyRow([1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1]),
+        keyRow([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]),
+        keyRow([1.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5]),
+        keyRow([1.7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.9]),
+        keyRow([2.2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2.2]),
+        keyRow([1.3, 1.2, 1.2, 6, 1.3, 1.3, 1.2, 1.3])
+      ]),
+      h("div", { class: "pc-side" }, [
+        keyRow([1, 1, 1]),
+        keyRow([1, 1, 1]),
+        keyRow([1, 1, 1]),
+        keyRow([1, 1, 1])
+      ]),
+      h("div", { class: "pc-num" }, [
+        keyRow([1, 1, 1, 1]),
+        keyRow([1, 1, 1, 1]),
+        keyRow([1, 1, 1, 1]),
+        keyRow([1, 1, 1, 1]),
+        keyRow([2, 1])
+      ])
     ]);
   }
 
@@ -158,10 +200,7 @@
       ]),
       h("div", { class: "pc-neck" }),
       h("div", { class: "pc-desk" }, [
-        h("div", { class: "pc-board" }, [
-          h("div", { class: "pc-keys" }),
-          h("div", { class: "pc-num" })
-        ]),
+        keyboard(),
         h("div", { class: "pc-mouse" })
       ])
     ]);
@@ -218,7 +257,7 @@
       h("p", { class: "pc-user", text: "특별조사2계" }),
       pcTabButton("files", "사건 파일", ui.pcTab),
       pcTabButton("time", "시간 기록", ui.pcTab),
-      pcTabButton("report", "대조·의견", ui.pcTab)
+      pcTabButton("report", "대조·의견", ui.pcTab, true)
     ]);
     var work = h("div", { class: "pc-work" });
     work.appendChild(pcFiles(data, ui));
@@ -256,11 +295,13 @@
     ]);
   }
 
-  function pcTabButton(id, label, active) {
+  function pcTabButton(id, label, active, drop) {
     return h("button", {
       type: "button",
       class: "pc-nav-btn" + (active === id ? " active" : ""),
-      "data-pc-tab": id
+      "data-pc-tab": id,
+      "data-drop": drop ? "pin" : null,
+      "data-drop-tab": drop ? id : null
     }, [
       h("span", { class: "pc-folder", "aria-hidden": "true" }),
       h("span", { text: label })
@@ -279,7 +320,9 @@
       list.appendChild(h("button", {
         type: "button",
         class: "pc-file" + (ui.pcDoc === doc.id ? " active" : ""),
-        "data-pc-doc": doc.id
+        draggable: "true",
+        "data-pc-doc": doc.id,
+        "data-drag-doc": doc.id
       }, [
         h("span", { class: "pc-file-icon", text: SR.dom.kindGroup(doc.kind).slice(0, 1) }),
         h("span", { class: "pc-file-name", text: doc.title }),
@@ -296,7 +339,25 @@
     browser.appendChild(list);
     browser.appendChild(previews);
     pane.appendChild(browser);
+    pane.appendChild(pinTray(data, ui));
     return pane;
+  }
+
+  function pinTray(data, ui) {
+    var tray = h("div", { class: "pc-tray", "data-drop": "pin" });
+    tray.appendChild(h("p", { class: "pc-tray-label", text: "대조" }));
+    var row = h("div", { class: "pc-tray-row" });
+    if (!ui.pins.length) row.appendChild(h("p", { class: "pc-tray-hint", text: "파일을 여기로 끌어 놓으십시오." }));
+    ui.pins.forEach(function (id) {
+      var doc = docById(data, id);
+      if (!doc) return;
+      row.appendChild(h("span", { class: "pc-chip", text: doc.title }));
+    });
+    var left = 3 - ui.pins.length;
+    var i;
+    for (i = 0; i < left; i++) row.appendChild(h("span", { class: "pc-slot", text: "빈 칸" }));
+    tray.appendChild(row);
+    return tray;
   }
 
   function slip(doc, data, ui, state, closed, step, shown) {
@@ -322,6 +383,60 @@
       if (closed) node.appendChild(h("p", { class: "closed-note", text: "종결된 철입니다." }));
     }
     return node;
+  }
+
+  function bindFileDrag(desk, ui) {
+    var dragId = "";
+    var ghost = null;
+    function clearGhost() {
+      if (ghost) ghost.remove();
+      ghost = null;
+      desk.querySelectorAll(".hot").forEach(function (el) { el.classList.remove("hot"); });
+    }
+    desk.querySelectorAll("[data-drag-doc]").forEach(function (el) {
+      el.addEventListener("dragstart", function (e) {
+        dragId = el.getAttribute("data-drag-doc");
+        if (e.dataTransfer) {
+          e.dataTransfer.setData("text/plain", dragId);
+          e.dataTransfer.effectAllowed = "copy";
+        }
+        var name = el.querySelector(".pc-file-name");
+        ghost = h("div", { class: "pc-ghost", text: name ? name.textContent : "서류" });
+        document.body.appendChild(ghost);
+        el.classList.add("dragging");
+      });
+      el.addEventListener("dragend", function () {
+        el.classList.remove("dragging");
+        clearGhost();
+        dragId = "";
+      });
+    });
+    desk.addEventListener("dragover", function (e) {
+      if (!ghost) return;
+      ghost.style.left = (e.clientX + 14) + "px";
+      ghost.style.top = (e.clientY + 16) + "px";
+    });
+    desk.querySelectorAll("[data-drop='pin']").forEach(function (el) {
+      el.addEventListener("dragover", function (e) {
+        if (!dragId) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+        el.classList.add("hot");
+      });
+      el.addEventListener("dragleave", function (e) {
+        if (e.target !== el) return;
+        el.classList.remove("hot");
+      });
+      el.addEventListener("drop", function (e) {
+        e.preventDefault();
+        var id = dragId || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+        var tab = el.getAttribute("data-drop-tab") || "";
+        clearGhost();
+        dragId = "";
+        if (!id) return;
+        desk.dispatchEvent(new CustomEvent("sr-pin", { bubbles: true, detail: { id: id, tab: tab } }));
+      });
+    });
   }
 
   function applyView(world, ui) {
@@ -390,6 +505,7 @@
         });
       });
     });
+    bindFileDrag(desk, ui);
     var pop = desk.querySelector(".pc-pop");
     pop.addEventListener("click", function (e) {
       if (e.target !== pop) return;
@@ -532,7 +648,6 @@
         ]),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "manual", text: "매뉴얼" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "people", text: "인물" }),
-        h("button", { class: "btn btn-on-dark", type: "button", "data-action": "notebook", text: "수첩" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "save", text: "저장" }),
         h("button", { class: "btn btn-on-dark" + (needCount && haveNeed === needCount ? " ready" : "") + tutorClass(step, "report"), type: "button", "data-action": "report", text: data.accusation ? "보고서" : "의견서" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "folders", text: "철로" })
@@ -690,7 +805,7 @@
   }
 
   function compareCol(data, ui, closed, step) {
-    var bar = h("footer", { class: "compare" });
+    var bar = h("footer", { class: "compare", "data-drop": "pin", "data-drop-tab": "report" });
     bar.appendChild(h("h2", { text: "대조" }));
     var slots = h("div", { class: "slots" });
     if (!ui.pins.length) slots.appendChild(h("p", { class: "empty", text: "최대 3장. 모순에 필요한 서류만 올리십시오." }));

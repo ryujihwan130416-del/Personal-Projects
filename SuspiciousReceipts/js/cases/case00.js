@@ -16,7 +16,7 @@
     epilogue: "100번은 101번보다 이를 수 없습니다. 18:40은 나중에 적은 시각입니다. 진짜 철은 다음 폴더입니다.",
     tutorial: [
       { until: "seen", doc: "slip", pulse: "doc:slip", text: "왼쪽 서랍을 열고 연습 영수증을 꺼내십시오." },
-      { until: "pin", doc: "slip", pulse: "pin", text: "대조에 올리기를 누르십시오. 서류는 최대 세 장입니다." },
+      { until: "pin", doc: "slip", pulse: "pin", text: "대조에 올리기를 누르거나, 컴퓨터의 사건 파일에서 대조 칸으로 끌어 놓으십시오." },
       { until: "seen", doc: "seq", pulse: "doc:seq", text: "단말기 대조표를 여십시오. 번호는 시간순으로만 커집니다." },
       { until: "pin", doc: "seq", pulse: "pin", text: "대조표도 대조 칸에 올리십시오. 커피는 올리지 마십시오." },
       { until: "found", id: "f-drill", pulse: "file", text: "모순 유형을 시각변조로 바꾸고 지적 올리기를 누르십시오." },

@@ -523,6 +523,12 @@
     var page = h("div", { class: "nb-page" });
     page.appendChild(h("h2", { text: "조사 수첩" }));
     page.appendChild(h("p", { class: "nb-kicker", text: "한빛지방국세청  ·  특별조사2계" }));
+    if (ui.caseId) {
+      page.appendChild(h("label", { class: "memo" }, [
+        h("span", { text: "이 철의 메모. 채점하지 않습니다." }),
+        h("textarea", { id: "case-memo", rows: "4", placeholder: "이 브라우저에 남습니다." }, [state.memos[ui.caseId] || ""])
+      ]));
+    }
     if (!state.scraps.length) page.appendChild(h("p", { text: "아직 베껴 둔 줄이 없습니다. 서류를 연 뒤 수첩에 남기기를 누르십시오." }));
     state.scraps.forEach(function (s) {
       var note = h("article", { class: "nb-note" });
@@ -993,13 +999,44 @@
     }
     if (name === "open-case") { openCase(el.getAttribute("data-case")); return; }
     if (name === "egg") {
-      var eggs = {
-        coffee: "식은 커피다. 한 모금도 줄지 않았다.",
-        pencil: "연필심이 무뎌졌다. 숫자는 그래도 또렷하다.",
-        eraser: "지운 자리가 하얗다. 누군가 먼저 적었다."
-      };
-      var line = eggs[el.getAttribute("data-egg")];
-      if (line) pushToast(line);
+      var egg = el.getAttribute("data-egg");
+      if (egg === "coffee") {
+        if (state.coffeeGone) return;
+        state.coffeeHits = (state.coffeeHits || 0) + 1;
+        if (state.coffeeHits >= 5) {
+          state.coffeeGone = true;
+          persist();
+          playCinema("spill", function () {
+            ui.caseId = state.place && state.place.caseId;
+            ui.screen = "desk";
+            playing = true;
+            paint();
+          });
+          return;
+        }
+        pushToast(state.coffeeHits >= 4 ? "잔이 가장자리에 걸렸다." : "식은 커피다. 한 모금도 줄지 않았다.");
+        persist();
+        paint();
+        return;
+      }
+      if (egg === "pencil") {
+        if (state.pencilBroken) {
+          pushToast("이미 부러진 연필이다.");
+          paint();
+          return;
+        }
+        state.pencilHits = (state.pencilHits || 0) + 1;
+        if (state.pencilHits >= 4) {
+          state.pencilBroken = true;
+          pushToast("연필이 부러졌다.");
+        } else {
+          pushToast("연필심이 무뎌졌다. 숫자는 그래도 또렷하다.");
+        }
+        persist();
+        paint();
+        return;
+      }
+      if (egg === "eraser") pushToast("지운 자리가 하얗다. 누군가 먼저 적었다.");
       paint();
       return;
     }
@@ -1131,6 +1168,24 @@
       paint();
     }
   }
+
+  root.addEventListener("sr-pin", function (e) {
+    var id = e.detail && e.detail.id;
+    if (!id) return;
+    if (e.detail.tab) ui.pcTab = e.detail.tab;
+    if (ui.pins.indexOf(id) !== -1) {
+      pushToast("이미 대조에 있습니다.");
+      paint();
+      return;
+    }
+    if (ui.pins.length >= 3) {
+      pushToast("대조는 3장까지입니다.");
+      paint();
+      return;
+    }
+    ui.pins.push(id);
+    paint();
+  });
 
   root.addEventListener("click", function (e) {
     var t = e.target.closest("[data-action]");
