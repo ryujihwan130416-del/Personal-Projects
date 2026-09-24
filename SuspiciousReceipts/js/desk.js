@@ -149,15 +149,17 @@
   }
 
   function laptop() {
-    var keys = h("div", { class: "lap-keys" });
-    var i;
-    for (i = 0; i < 48; i++) keys.appendChild(h("i"));
-    return h("button", { type: "button", class: "laptop", "data-pc": "open", "aria-label": "노트북 열기" }, [
-      h("div", { class: "lap-lid" }, [h("div", { class: "lap-wall" })]),
-      h("div", { class: "lap-base" }, [
-        h("div", { class: "lap-hinge" }),
-        keys,
-        h("div", { class: "lap-pad" })
+    return h("button", { type: "button", class: "laptop", "data-pc": "open", "aria-label": "컴퓨터 열기" }, [
+      h("div", { class: "pc-monitor" }, [
+        h("div", { class: "pc-glass" })
+      ]),
+      h("div", { class: "pc-neck" }),
+      h("div", { class: "pc-desk" }, [
+        h("div", { class: "pc-board" }, [
+          h("div", { class: "pc-keys" }),
+          h("div", { class: "pc-num" })
+        ]),
+        h("div", { class: "pc-mouse" })
       ])
     ]);
   }
