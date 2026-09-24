@@ -206,20 +206,92 @@
   }
 
   function pcPop(data, ui, prog, closed, step) {
+    ui.pcTab = ui.pcTab || "files";
+    ui.pcDoc = ui.pcDoc || data.docs[0].id;
     var screen = h("div", { class: "screen" });
-    screen.appendChild(h("p", { class: "screen-kicker", text: "노트북  ·  특별조사2계" }));
-    screen.appendChild(h("p", { class: "screen-brief", text: data.briefing }));
-    screen.appendChild(sideCol(data, prog, closed));
-    screen.appendChild(compareCol(data, ui, closed, step));
+    var nav = h("nav", { class: "pc-nav", "aria-label": "노트북 메뉴" }, [
+      h("p", { class: "pc-user", text: "특별조사2계" }),
+      pcTabButton("files", "사건 파일", ui.pcTab),
+      pcTabButton("time", "시간 기록", ui.pcTab),
+      pcTabButton("report", "대조·의견", ui.pcTab)
+    ]);
+    var work = h("div", { class: "pc-work" });
+    work.appendChild(pcFiles(data, ui));
+    var timePane = h("section", {
+      class: "pc-pane" + (ui.pcTab === "time" ? " active" : ""),
+      "data-pc-pane": "time"
+    }, [
+      h("div", { class: "pc-path", text: "내 컴퓨터  >  사건 기록  >  시간 기록" })
+    ]);
+    timePane.appendChild(sideCol(data, prog, closed));
+    work.appendChild(timePane);
+    var reportPane = h("section", {
+      class: "pc-pane" + (ui.pcTab === "report" ? " active" : ""),
+      "data-pc-pane": "report"
+    }, [
+      h("div", { class: "pc-path", text: "내 컴퓨터  >  조사 도구  >  대조·의견" }),
+      h("article", { class: "pc-brief" }, [
+        h("strong", { text: data.title }),
+        h("p", { text: data.question }),
+        h("p", { text: data.briefing })
+      ])
+    ]);
+    reportPane.appendChild(compareCol(data, ui, closed, step));
+    work.appendChild(reportPane);
+    screen.appendChild(nav);
+    screen.appendChild(work);
     return h("div", { class: "pc-pop" + (ui.pcOpen ? "" : " shut") }, [
       h("div", { class: "pc-frame" }, [
         h("div", { class: "pc-top" }, [
-          h("span", { text: "한빛지방국세청" }),
+          h("span", { text: "한빛 업무용 노트북  ·  파일 탐색기" }),
           h("button", { type: "button", class: "pc-x", "data-pc": "close", text: "닫기" })
         ]),
         screen
       ])
     ]);
+  }
+
+  function pcTabButton(id, label, active) {
+    return h("button", {
+      type: "button",
+      class: "pc-nav-btn" + (active === id ? " active" : ""),
+      "data-pc-tab": id
+    }, [
+      h("span", { class: "pc-folder", "aria-hidden": "true" }),
+      h("span", { text: label })
+    ]);
+  }
+
+  function pcFiles(data, ui) {
+    var pane = h("section", {
+      class: "pc-pane pc-files" + (ui.pcTab === "files" ? " active" : ""),
+      "data-pc-pane": "files"
+    });
+    pane.appendChild(h("div", { class: "pc-path", text: "내 컴퓨터  >  조사철  >  " + data.title }));
+    var browser = h("div", { class: "pc-browser" });
+    var list = h("div", { class: "pc-file-list" });
+    data.docs.forEach(function (doc) {
+      list.appendChild(h("button", {
+        type: "button",
+        class: "pc-file" + (ui.pcDoc === doc.id ? " active" : ""),
+        "data-pc-doc": doc.id
+      }, [
+        h("span", { class: "pc-file-icon", text: SR.dom.kindGroup(doc.kind).slice(0, 1) }),
+        h("span", { class: "pc-file-name", text: doc.title }),
+        h("span", { class: "pc-file-date", text: doc.date || "날짜 없음" })
+      ]));
+    });
+    var previews = h("div", { class: "pc-previews" });
+    data.docs.forEach(function (doc) {
+      previews.appendChild(h("div", {
+        class: "pc-preview" + (ui.pcDoc === doc.id ? " active" : ""),
+        "data-pc-preview": doc.id
+      }, [paper(doc)]));
+    });
+    browser.appendChild(list);
+    browser.appendChild(previews);
+    pane.appendChild(browser);
+    return pane;
   }
 
   function slip(doc, data, ui, state, closed, step, shown) {
@@ -287,6 +359,30 @@
         var pop = desk.querySelector(".pc-pop");
         if (ui.pcOpen) pop.classList.remove("shut");
         else pop.classList.add("shut");
+      });
+    });
+    desk.querySelectorAll("[data-pc-tab]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var id = el.getAttribute("data-pc-tab");
+        ui.pcTab = id;
+        desk.querySelectorAll("[data-pc-tab]").forEach(function (b) {
+          b.classList.toggle("active", b.getAttribute("data-pc-tab") === id);
+        });
+        desk.querySelectorAll("[data-pc-pane]").forEach(function (pane) {
+          pane.classList.toggle("active", pane.getAttribute("data-pc-pane") === id);
+        });
+      });
+    });
+    desk.querySelectorAll("[data-pc-doc]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var id = el.getAttribute("data-pc-doc");
+        ui.pcDoc = id;
+        desk.querySelectorAll("[data-pc-doc]").forEach(function (b) {
+          b.classList.toggle("active", b.getAttribute("data-pc-doc") === id);
+        });
+        desk.querySelectorAll("[data-pc-preview]").forEach(function (preview) {
+          preview.classList.toggle("active", preview.getAttribute("data-pc-preview") === id);
+        });
       });
     });
     var pop = desk.querySelector(".pc-pop");
