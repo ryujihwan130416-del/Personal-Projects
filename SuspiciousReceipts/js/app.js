@@ -248,14 +248,11 @@
   }
 
   function sampleReceipt() {
-    return h("aside", { class: "sample-receipt", "aria-hidden": "true" }, [
-      h("p", { class: "paper-kicker", text: "견본 전표" }),
-      h("h3", { text: "샘플 상점" }),
-      h("p", { text: "이 종이는 장식이라 사건이 아닙니다." }),
-      h("p", { class: "mono", text: "000-00-00000" }),
-      h("p", { class: "mono", text: "0원" }),
-      h("span", { class: "ink-stamp", text: "착수" })
-    ]);
+    var data = SR.caseById("case01");
+    var doc = data && data.docs.filter(function (d) { return d.id === "mart"; })[0];
+    var slip = h("aside", { class: "sample-receipt", "aria-hidden": "true" });
+    if (doc) slip.appendChild(SR.dom.paper(doc));
+    return slip;
   }
 
   function paintIntro() {

@@ -29,35 +29,12 @@
 .title-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
 .footnote { color: #cbbfa8; max-width: 36rem; }
 .sample-receipt {
-  width: 240px;
+  width: min(280px, 100%);
   justify-self: end;
-  position: relative;
   transform: rotate(2.5deg);
-  background:
-    linear-gradient(#f7f1e4, #f7f1e4) padding-box,
-    repeating-linear-gradient(#e7dcc4, #e7dcc4 28px, #d9cbb0 29px);
-  color: var(--ink);
-  padding: 1.3rem 1.1rem 2.4rem;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.45));
 }
-.sample-receipt h3 { margin: 0.2rem 0; }
-.ink-stamp {
-  position: absolute;
-  right: 18px;
-  bottom: 28px;
-  width: 76px;
-  height: 76px;
-  display: grid;
-  place-items: center;
-  border: 4px solid var(--stamp);
-  border-radius: 50%;
-  color: var(--stamp);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  transform: rotate(-12deg);
-  background: rgba(143, 29, 29, 0.06);
-  box-shadow: inset 0 0 0 2px rgba(143, 29, 29, 0.45);
-}
+.sample-receipt .paper { margin: 0; }
 
 .folders {
   min-height: 100vh;
