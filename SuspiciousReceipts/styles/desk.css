@@ -19,6 +19,33 @@
 .bar-title h1 { margin: 0.1rem 0; font-size: 1.55rem; }
 .question { margin: 0; color: #e6d8c2; }
 .bar-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: flex-end; align-items: center; }
+.btn-hint {
+  appearance: none;
+  border: 0;
+  background: linear-gradient(180deg, #fff6d2 0 8px, #f3e2a4 8px);
+  color: #1c1915;
+  min-height: 44px;
+  padding: 0.35rem 0.7rem 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  box-shadow: 3px 3px 0 #8a7340;
+  transform: rotate(-1.5deg);
+  cursor: pointer;
+  font-weight: 800;
+}
+.btn-hint:hover { filter: brightness(1.04); }
+.btn-hint:active { transform: rotate(-1.5deg) translateY(1px); }
+.hint-word { letter-spacing: 0.08em; }
+.hint-cost {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #8f1d1d;
+  border: 1px solid #8f1d1d;
+  padding: 0.05rem 0.28rem;
+}
+.score-chip { color: #f3e2a4; border-color: rgba(243, 226, 164, 0.7); }
 
 .coach {
   display: flex;
