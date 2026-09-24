@@ -89,17 +89,45 @@
   }
 
   function statementPaper(doc, art) {
-    art.appendChild(h("div", { class: "form-head" }, [
-      h("strong", { text: doc.title }),
-      h("span", { text: "진술" })
-    ]));
+    var affidavit = doc.title.indexOf("진술") !== -1;
+    if (!affidavit) {
+      art.appendChild(h("div", { class: "form-head" }, [
+        h("strong", { text: doc.title }),
+        h("span", { text: "진술" })
+      ]));
+      doc.fields.forEach(function (f) {
+        var row = h("div", { class: "field" });
+        row.appendChild(h("span", { class: "field-label", text: f.label }));
+        row.appendChild(h("span", { class: "field-value", text: f.value }));
+        art.appendChild(row);
+      });
+      art.appendChild(h("p", { class: "sign-line", text: "서명 ________" }));
+      return;
+    }
+    art.classList.add("affidavit");
+    var who = "";
+    var body = "";
+    var table = h("table", { class: "af-table" });
     doc.fields.forEach(function (f) {
-      var row = h("div", { class: "field" });
-      row.appendChild(h("span", { class: "field-label", text: f.label }));
-      row.appendChild(h("span", { class: "field-value", text: f.value }));
-      art.appendChild(row);
+      if (f.label === "진술인") who = f.value;
+      if (f.label === "내용") { body = f.value; return; }
+      table.appendChild(h("tr", {}, [
+        h("th", { text: f.label }),
+        h("td", { text: f.value })
+      ]));
     });
-    art.appendChild(h("p", { class: "sign-line", text: "서명 ________" }));
+    art.appendChild(h("p", { class: "af-agency", text: "한빛지방국세청  특별조사2계" }));
+    art.appendChild(h("h3", { class: "af-title", text: "진 술 서" }));
+    art.appendChild(h("p", { class: "af-no", text: (doc.date || "") + "  ·  " + doc.title }));
+    art.appendChild(table);
+    art.appendChild(h("p", { class: "af-lead", text: "위 사람은 다음과 같이 진술하였다." }));
+    art.appendChild(h("div", { class: "af-body", text: body }));
+    art.appendChild(h("p", { class: "af-oath", text: "위 내용은 본인이 진술한 것과 다름없습니다." }));
+    art.appendChild(h("div", { class: "af-sign" }, [
+      h("span", { text: "진술인" }),
+      h("span", { class: "af-name", text: who }),
+      h("span", { text: "(인)" })
+    ]));
   }
 
   function registryPaper(doc, art) {

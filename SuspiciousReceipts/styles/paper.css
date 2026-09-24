@@ -123,6 +123,44 @@
   );
   padding-top: 0.8rem;
 }
+.paper.kind-statement.affidavit {
+  width: min(340px, 100%);
+  aspect-ratio: 210 / 297;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 0.85rem 0.75rem 0.7rem;
+  background: #f7f4ee;
+  background-image: none;
+  color: #1a1a1a;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 16px 28px rgba(0, 0, 0, 0.22);
+}
+.af-agency { margin: 0; text-align: center; letter-spacing: 0.16em; font-size: 0.68rem; }
+.af-title { margin: 0.15rem 0 0.2rem; text-align: center; letter-spacing: 0.42em; font-size: 1.35rem; font-weight: 800; }
+.af-no { margin: 0 0 0.4rem; text-align: right; font-size: 0.68rem; color: #3a342c; }
+.af-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+.af-table th, .af-table td { border: 1px solid #1c1915; padding: 0.22rem 0.35rem; vertical-align: top; }
+.af-table th { width: 4.4rem; background: #efeae0; text-align: center; font-weight: 700; }
+.af-lead { margin: 0.4rem 0 0.2rem; font-size: 0.72rem; }
+.af-body {
+  flex: 1;
+  min-height: 6.5rem;
+  border: 1px solid #1c1915;
+  padding: 0.35rem 0.45rem 0.2rem;
+  line-height: 1.65rem;
+  font-size: 0.8rem;
+  background-image: repeating-linear-gradient(180deg, transparent 0 1.6rem, rgba(28, 25, 21, 0.2) 1.6rem 1.62rem);
+  background-position: 0 0.35rem;
+}
+.af-oath { margin: 0.4rem 0 0.3rem; text-align: center; font-size: 0.68rem; }
+.af-sign { display: flex; justify-content: flex-end; align-items: center; gap: 0.45rem; font-size: 0.75rem; }
+.af-name { min-width: 4.5rem; text-align: center; border-bottom: 1px solid #1c1915; font-weight: 700; }
+.paper.affidavit.compact { aspect-ratio: auto; width: 100%; max-height: 240px; }
+.slip-sheet:has(.affidavit) { width: 340px; }
+.slip .paper.affidavit { width: 340px; }
 .form-head {
   display: flex;
   justify-content: space-between;
