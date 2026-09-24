@@ -78,14 +78,17 @@
     ensureLay(ui, data);
     var view = h("div", { class: "desk-view" });
     var world = h("div", { class: "desk-world" });
-    world.appendChild(scenery());
-    world.appendChild(computer(data, list, ui, state, prog, closed, step));
+    var plane = h("div", { class: "desk-plane" });
+    plane.appendChild(scenery());
     var shown = {};
     list.forEach(function (doc) { shown[doc.id] = true; });
     data.docs.forEach(function (doc) {
-      world.appendChild(slip(doc, data, ui, state, closed, step, !!shown[doc.id]));
+      plane.appendChild(slip(doc, data, ui, state, closed, step, !!shown[doc.id]));
     });
+    world.appendChild(plane);
     view.appendChild(world);
+    view.appendChild(computer());
+    desk.appendChild(pcPop(data, list, ui, state, prog, closed, step));
     view.appendChild(h("div", { class: "zoom-bar" }, [
       h("button", { type: "button", class: "zoom-btn", "data-zoom": "in", text: "확대" }),
       h("button", { type: "button", class: "zoom-btn", "data-zoom": "out", text: "축소" }),
@@ -109,8 +112,8 @@
       var col = i % 4;
       var row = Math.floor(i / 4);
       ui.papers[doc.id] = {
-        x: 640 + col * 260 + (i % 2) * 18,
-        y: 70 + row * 250,
+        x: 80 + col * 400 + (i % 2) * 24,
+        y: 36 + row * 200,
         rot: Math.round((Math.random() * 30 - 15) * 10) / 10,
         z: i + 2
       };
@@ -118,16 +121,8 @@
   }
 
   function scenery() {
-    var now = new Date();
-    var hour = (now.getHours() % 12) * 30 + now.getMinutes() * 0.5;
-    var minute = now.getMinutes() * 6;
     return h("div", { class: "scenery", "aria-hidden": "true" }, [
       h("div", { class: "lamp" }),
-      h("div", { class: "clock" }, [
-        h("span", { class: "clock-face" }),
-        h("i", { class: "hand hour", style: "transform:rotate(" + hour + "deg)" }),
-        h("i", { class: "hand min", style: "transform:rotate(" + minute + "deg)" })
-      ]),
       h("div", { class: "pencil a" }),
       h("div", { class: "pencil b" }),
       h("div", { class: "pencil c" }),
@@ -136,7 +131,18 @@
     ]);
   }
 
-  function computer(data, list, ui, state, prog, closed, step) {
+  function computer() {
+    return h("button", { type: "button", class: "monitor", "data-pc": "open", "aria-label": "단말기 열기" }, [
+      h("div", { class: "bezel" }, [
+        h("div", { class: "glass" }, [h("span", { text: "화면" })])
+      ]),
+      h("div", { class: "stand" }),
+      h("div", { class: "keyboard" }),
+      h("div", { class: "mouse" })
+    ]);
+  }
+
+  function pcPop(data, list, ui, state, prog, closed, step) {
     var screen = h("div", { class: "screen" });
     screen.appendChild(h("p", { class: "screen-kicker", text: "단말기  ·  특별조사2계" }));
     screen.appendChild(h("p", { class: "screen-brief", text: data.briefing }));
@@ -147,11 +153,14 @@
       h("span", { text: "사건 메모" }),
       h("textarea", { id: "case-memo", rows: "2", placeholder: "채점하지 않습니다. 이 브라우저에 남습니다." }, [state.memos[data.id] || ""])
     ]));
-    return h("section", { class: "monitor" }, [
-      h("div", { class: "bezel" }, [screen]),
-      h("div", { class: "stand" }),
-      h("div", { class: "keyboard" }),
-      h("div", { class: "mouse" })
+    return h("div", { class: "pc-pop" + (ui.pcOpen ? "" : " shut") }, [
+      h("div", { class: "pc-frame" }, [
+        h("div", { class: "pc-top" }, [
+          h("span", { text: "한빛지방국세청" }),
+          h("button", { type: "button", class: "pc-x", "data-pc": "close", text: "닫기" })
+        ]),
+        screen
+      ])
     ]);
   }
 
@@ -166,7 +175,7 @@
     node.style.left = spec.x + "px";
     node.style.top = spec.y + "px";
     node.style.zIndex = String(spec.z);
-    node.style.transform = "rotate(" + spec.rot + "deg)";
+    node.style.transform = "translateZ(18px) rotate(" + spec.rot + "deg)";
     node.appendChild(paper(doc));
     if (ui.docId === doc.id) {
       var scrapped = state.scraps.some(function (s) { return s.caseId === data.id && s.docId === doc.id; });
@@ -211,6 +220,22 @@
       ui.view.ready = true;
     }
     applyView(world, ui);
+    var desk = view.parentElement;
+    desk.querySelectorAll("[data-pc]").forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        ui.pcOpen = el.getAttribute("data-pc") === "open";
+        var pop = desk.querySelector(".pc-pop");
+        if (ui.pcOpen) pop.classList.remove("shut");
+        else pop.classList.add("shut");
+      });
+    });
+    var pop = desk.querySelector(".pc-pop");
+    pop.addEventListener("click", function (e) {
+      if (e.target !== pop) return;
+      ui.pcOpen = false;
+      pop.classList.add("shut");
+    });
     view.querySelectorAll("[data-zoom]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var kind = btn.getAttribute("data-zoom");

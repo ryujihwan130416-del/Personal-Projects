@@ -2,6 +2,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(231, 194, 122, 0.14), transparent 28%),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 11px),
@@ -64,8 +65,10 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: #1a1410;
+  background: #120e0b;
   cursor: grab;
+  perspective: 1500px;
+  perspective-origin: 50% 18%;
 }
 .desk-world {
   position: absolute;
@@ -74,11 +77,20 @@
   width: 1760px;
   height: 1080px;
   transform-origin: 0 0;
+  transform-style: preserve-3d;
+}
+.desk-plane {
+  width: 1760px;
+  height: 1080px;
+  position: relative;
+  transform: rotateX(46deg);
+  transform-origin: 50% 100%;
+  transform-style: preserve-3d;
   background:
-    radial-gradient(ellipse at 50% 40%, rgba(255, 220, 160, 0.16), transparent 42%),
-    repeating-linear-gradient(90deg, rgba(90, 58, 32, 0.18) 0 2px, transparent 2px 18px),
-    linear-gradient(180deg, #8a5a32, #6b4424 40%, #5a381c);
-  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.25);
+    radial-gradient(ellipse at 50% 30%, rgba(255, 220, 160, 0.18), transparent 46%),
+    repeating-linear-gradient(90deg, rgba(90, 58, 32, 0.2) 0 2px, transparent 2px 16px),
+    linear-gradient(180deg, #9a6840, #6e4626 55%, #4e3018);
+  box-shadow: 0 40px 50px rgba(0, 0, 0, 0.45);
 }
 .zoom-bar {
   position: absolute;
@@ -108,28 +120,84 @@
 .slip.picked { z-index: 20; filter: drop-shadow(0 16px 16px rgba(0, 0, 0, 0.45)); }
 .slip-actions { display: flex; gap: 0.3rem; margin-top: 0.35rem; }
 .monitor {
+  appearance: none;
   position: absolute;
-  left: 70px;
-  top: 80px;
-  width: 520px;
-  z-index: 1;
+  left: 50%;
+  bottom: 0;
+  width: min(680px, 78%);
+  z-index: 8;
+  padding: 0 0 8px;
+  border: 0;
+  background: transparent;
+  color: #d7efe4;
+  cursor: pointer;
+  transform: translateX(-50%) perspective(900px) rotateX(14deg);
+  transform-origin: 50% 100%;
 }
 .bezel {
   background: #1b1c1a;
-  border: 10px solid #2c2d2a;
-  border-radius: 10px 10px 4px 4px;
-  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.35);
+  border: 14px solid #2e302c;
+  border-radius: 12px 12px 6px 6px;
+  box-shadow: 0 22px 30px rgba(0, 0, 0, 0.4);
+}
+.glass {
+  height: 250px;
+  background:
+    linear-gradient(180deg, rgba(180, 255, 220, 0.18), transparent 42%),
+    radial-gradient(ellipse at 50% 40%, #1d4a3a, #0b1612 70%);
+  display: grid;
+  place-items: center;
+  letter-spacing: 0.2em;
+  font-weight: 800;
 }
 .screen {
-  height: 460px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   background: #10241c;
   color: #d7efe4;
-  padding: 0.7rem 0.75rem 0.9rem;
+  padding: 0.7rem 0.85rem 1rem;
+}
+.pc-pop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: rgba(6, 4, 3, 0.62);
+  display: grid;
+  place-items: center;
+  padding: 4vh 4vw;
+}
+.pc-pop.shut { display: none; }
+.pc-frame {
+  width: min(980px, 100%);
+  height: min(760px, 100%);
+  background: #141816;
+  border: 16px solid #2a2c29;
+  border-radius: 12px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+}
+.pc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  background: #1c1e1b;
+  color: #d7efe4;
+}
+.pc-x {
+  appearance: none;
+  border: 1px solid rgba(215, 239, 228, 0.4);
+  background: transparent;
+  color: #d7efe4;
+  min-height: 32px;
+  padding: 0 0.7rem;
+  cursor: pointer;
 }
 .screen-kicker { margin: 0; letter-spacing: 0.12em; color: #8fbfa4; font-size: 0.75rem; }
 .screen-brief { margin: 0.35rem 0 0.6rem; line-height: 1.45; font-size: 0.86rem; }
-.monitor .col, .monitor .compare {
+.pc-frame .col, .pc-frame .compare {
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -139,9 +207,9 @@
   width: auto;
   margin: 0;
 }
-.monitor h2 { color: #e7c27a; font-size: 0.82rem; }
-.monitor .doc-item, .monitor .time-item { color: #d7efe4; }
-.monitor .memo, .monitor .closed-note, .monitor .empty { color: #b7d2c4; }
+.pc-frame h2 { color: #e7c27a; font-size: 0.82rem; }
+.pc-frame .doc-item, .pc-frame .time-item { color: #d7efe4; }
+.pc-frame .memo, .pc-frame .closed-note, .pc-frame .empty { color: #b7d2c4; }
 .stand {
   width: 90px;
   height: 46px;
@@ -197,32 +265,6 @@
   background: #c4a15a;
   border-radius: 8px 8px 2px 2px;
 }
-.clock {
-  position: absolute;
-  right: 90px;
-  top: 70px;
-  width: 120px;
-  height: 120px;
-}
-.clock-face {
-  display: block;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: #f4ead9;
-  border: 8px solid #2a241c;
-  box-shadow: 0 10px 16px rgba(0, 0, 0, 0.3);
-}
-.hand {
-  position: absolute;
-  left: 58px;
-  top: 24px;
-  width: 4px;
-  height: 40px;
-  background: #1c1915;
-  transform-origin: 50% 36px;
-}
-.hand.min { height: 48px; top: 16px; transform-origin: 50% 44px; width: 3px; }
 .pencil {
   position: absolute;
   width: 140px;
