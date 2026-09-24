@@ -70,20 +70,43 @@
     var haveNeed = need.filter(function (id) { return prog.found.indexOf(id) !== -1; }).length;
     var open = ui.docId ? docById(data, ui.docId) : null;
 
+    var step = tutorialStep(data, ui, prog, state);
     var desk = h("section", { class: "desk" });
-    desk.appendChild(header(data, haveNeed, need.length, closed));
-    if (!state.coachSeen && data.id === "case01") desk.appendChild(coach());
+    desk.appendChild(header(data, haveNeed, need.length, closed, step));
+    if (step) desk.appendChild(coach(step.text));
 
     var body = h("div", { class: "desk-body" });
-    body.appendChild(listCol(data, list, ui, state));
-    body.appendChild(readCol(data, open, state, closed, ui));
+    body.appendChild(listCol(data, list, ui, state, step));
+    body.appendChild(readCol(data, open, state, closed, ui, step));
     body.appendChild(sideCol(data, prog, closed));
     desk.appendChild(body);
-    desk.appendChild(compareCol(data, ui, closed));
+    desk.appendChild(compareCol(data, ui, closed, step));
     parent.appendChild(desk);
   }
 
-  function header(data, haveNeed, needCount, closed) {
+  function tutorialDone(step, data, ui, prog, state) {
+    if (step.until === "seen") return state.seen.indexOf(data.id + ":" + step.doc) !== -1;
+    if (step.until === "pin") return ui.pins.indexOf(step.doc) !== -1;
+    if (step.until === "found") return prog.found.indexOf(step.id) !== -1;
+    if (step.until === "closed") return prog.status === "closed";
+    return true;
+  }
+
+  function tutorialStep(data, ui, prog, state) {
+    var steps = data.tutorial;
+    if (!steps || prog.status === "closed") return null;
+    var i;
+    for (i = 0; i < steps.length; i++) {
+      if (!tutorialDone(steps[i], data, ui, prog, state)) return steps[i];
+    }
+    return null;
+  }
+
+  function tutorClass(step, key) {
+    return step && step.pulse === key ? " tutor" : "";
+  }
+
+  function header(data, haveNeed, needCount, closed, step) {
     var chips = [
       h("span", { class: "chip", text: data.difficulty }),
       h("span", { class: "chip", id: "play-clock", text: "" })
@@ -101,20 +124,19 @@
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "people", text: "인물" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "notebook", text: "수첩" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "save", text: "저장" }),
-        h("button", { class: "btn btn-on-dark" + (needCount && haveNeed === needCount ? " ready" : ""), type: "button", "data-action": "report", text: data.accusation ? "보고서" : "의견서" }),
+        h("button", { class: "btn btn-on-dark" + (needCount && haveNeed === needCount ? " ready" : "") + tutorClass(step, "report"), type: "button", "data-action": "report", text: data.accusation ? "보고서" : "의견서" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "folders", text: "철로" })
       ]))
     ]);
   }
 
-  function coach() {
-    return h("div", { class: "coach" }, [
-      h("p", { text: "서류를 열고, 대조에 올린 뒤, 모순 유형을 골라 지적하십시오. 필요한 장만 올려야 합니다." }),
-      h("button", { class: "btn", type: "button", "data-action": "dismiss-coach", text: "알겠습니다" })
+  function coach(text) {
+    return h("div", { class: "coach", role: "status" }, [
+      h("p", { text: "견습  " + text })
     ]);
   }
 
-  function listCol(data, list, ui, state) {
+  function listCol(data, list, ui, state, step) {
     var dates = datesOf(data);
     var col = h("aside", { class: "col list-col" });
     col.appendChild(h("h2", { text: "서류" }));
@@ -146,7 +168,7 @@
     list.forEach(function (doc, i) {
       var seen = state.seen.indexOf(data.id + ":" + doc.id) !== -1;
       var btn = h("button", {
-        class: "doc-item" + (ui.docId === doc.id ? " open" : "") + (i === ui.cursor ? " cursor" : ""),
+        class: "doc-item" + (ui.docId === doc.id ? " open" : "") + (i === ui.cursor ? " cursor" : "") + tutorClass(step, "doc:" + doc.id),
         type: "button",
         role: "option",
         "data-action": "open-doc",
@@ -175,7 +197,7 @@
     return wrap;
   }
 
-  function readCol(data, open, state, closed, ui) {
+  function readCol(data, open, state, closed, ui, step) {
     var col = h("main", { class: "col read-col" });
     var brief = h("details", { class: "brief", open: ui.briefOpen === false ? null : "open" });
     brief.appendChild(h("summary", { text: "과장 지시" }));
@@ -188,7 +210,7 @@
       stage.appendChild(paper(open));
       var scrapped = state.scraps.some(function (s) { return s.caseId === data.id && s.docId === open.id; });
       stage.appendChild(h("div", { class: "paper-actions" }, [
-        h("button", { class: "btn", type: "button", "data-action": "pin", "data-doc": open.id, text: "대조에 올리기" }),
+        h("button", { class: "btn" + (step && step.pulse === "pin" && open && step.doc === open.id ? " tutor" : ""), type: "button", "data-action": "pin", "data-doc": open.id, text: "대조에 올리기" }),
         h("button", { class: "btn", type: "button", "data-action": "scrap", text: scrapped ? "수첩에 있음" : "수첩에 남기기" })
       ]));
       if (closed) stage.appendChild(h("p", { class: "closed-note", text: "이 철은 종결되었습니다. 서류는 다시 읽을 수 있고, 새 지적만 닫혀 있습니다." }));
@@ -254,7 +276,7 @@
     return col;
   }
 
-  function compareCol(data, ui, closed) {
+  function compareCol(data, ui, closed, step) {
     var bar = h("footer", { class: "compare" });
     bar.appendChild(h("h2", { text: "대조" }));
     var slots = h("div", { class: "slots" });
@@ -269,7 +291,7 @@
     });
     bar.appendChild(slots);
     var form = h("form", { class: "file-form", action: "#" });
-    var sel = h("select", { id: "filing-type", "aria-label": "모순 유형", disabled: closed ? "disabled" : null });
+    var sel = h("select", { id: "filing-type", class: tutorClass(step, "file").trim(), "aria-label": "모순 유형", disabled: closed ? "disabled" : null });
     SR.manual.types.forEach(function (t) {
       var opt = h("option", { value: t, text: t });
       if (t === ui.filingType) opt.selected = true;
@@ -286,7 +308,7 @@
       "aria-label": "지적 메모"
     }));
     form.appendChild(h("button", {
-      class: "btn primary",
+      class: "btn primary" + tutorClass(step, "file"),
       type: "button",
       "data-action": "file",
       disabled: closed ? "disabled" : null,

@@ -26,6 +26,12 @@
   var scrolls = {};
   var lastTick = Date.now();
   var playing = false;
+  var cine = null;
+  var WRONG_CINE = {
+    "wrong-kim": { who: "김하늘", alibi: "회식 시각, 그는 북원 시네마에 있었습니다." },
+    "wrong-bae": { who: "배수아", alibi: "분식과 택시는 그 시각의 자리만 보여줄 뿐입니다." },
+    "wrong-choi": { who: "최민재", alibi: "통장의 이름과 도장의 이름은 다릅니다." }
+  };
   var NEED_LABEL = { "f-sign": "결재연결", "f-org": "조직연결", "f-port": "항만의 조직연결" };
 
   SR.audio.setMuted(state.mute);
@@ -58,9 +64,40 @@
   }
 
   function persist() {
-    state.place = { screen: ui.screen === "title" ? state.place.screen : ui.screen, caseId: ui.caseId };
-    if (ui.screen === "intro") state.place = { screen: "folders", caseId: null };
+    if (ui.screen !== "cinema") {
+      state.place = { screen: ui.screen === "title" ? state.place.screen : ui.screen, caseId: ui.caseId };
+      if (ui.screen === "intro") state.place = { screen: "folders", caseId: null };
+    }
     SR.store.save(state);
+  }
+
+  function endingCinema(id) {
+    if (!id) return "";
+    if (id.indexOf("wrong-") === 0) return "ending-wrong";
+    return "ending-" + id;
+  }
+
+  function playCinema(id, opts, done) {
+    if (typeof opts === "function") { done = opts; opts = {}; }
+    opts = opts || {};
+    if (!SR.cinema || !SR.cinema.has(id)) {
+      if (done) done();
+      return;
+    }
+    ui.screen = "cinema";
+    ui.overlay = null;
+    ui.confirm = null;
+    paint();
+    var host = document.getElementById("cinema-host");
+    try {
+      cine = SR.cinema.run(host, id, opts, function () {
+        cine = null;
+        if (done) done();
+      });
+    } catch (err) {
+      cine = null;
+      if (done) done();
+    }
   }
 
   function grant(id) {
@@ -103,6 +140,10 @@
   }
 
   function paint() {
+    if (cine) {
+      cine.stop(true);
+      cine = null;
+    }
     var active = document.activeElement;
     var focusId = active && active.id;
     var sel = active && typeof active.selectionStart === "number" ? active.selectionStart : null;
@@ -113,6 +154,7 @@
     else if (ui.screen === "folders") paintFolders();
     else if (ui.screen === "desk") paintDesk();
     else if (ui.screen === "epilogue") paintEpilogue();
+    else if (ui.screen === "cinema") root.appendChild(h("div", { id: "cinema-host" }));
     if (ui.overlay) root.appendChild(paintOverlay());
     if (ui.confirm) root.appendChild(paintConfirm());
     if (ui.toasts.length) {
@@ -151,7 +193,8 @@
     actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "manual", text: "매뉴얼" }));
     actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "mute", text: state.mute ? "소리 켜기" : "소리 끄기" }));
     copy.appendChild(actions);
-    copy.appendChild(h("p", { class: "footnote", text: "진행은 이 브라우저에 자동으로 남습니다. 슬롯에 저장하거나 파일로 내보낼 수 있습니다." }));
+    actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "replay-open", text: "착수 컷" }));
+    copy.appendChild(h("p", { class: "footnote", text: "진행은 이 브라우저에 자동으로 남습니다. 철 사이와 결말에는 컷이 있고, Esc로 건너뜁니다." }));
     view.appendChild(copy);
     view.appendChild(sampleReceipt());
     root.appendChild(view);
@@ -192,7 +235,7 @@
       h("div", { class: "bar-title" }, [
         h("p", { class: "kicker", text: "사건 철" }),
         h("h1", { text: "수상한 영수증" }),
-        h("p", { class: "question", text: "순서대로 열립니다. 끝까지 읽으면 마흔 분에서 한 시간입니다." })
+        h("p", { class: "question", text: "연습 전표부터 순서대로 열립니다. 철을 닫을 때마다 컷이 나옵니다." })
       ]),
       h("div", { class: "bar-actions" }, [
         h("span", { class: "chip", id: "play-clock", text: formatMs(state.playMs) }),
@@ -214,7 +257,7 @@
         "data-case": c.id,
         disabled: locked ? "disabled" : null
       }, [
-        h("span", { class: "folder-index", text: "0" + (i + 1) }),
+        h("span", { class: "folder-index", text: (i < 10 ? "0" : "") + i }),
         h("span", { class: "stamp " + st, text: stampText(c.id) }),
         h("strong", { text: c.title }),
         h("em", { text: c.question }),
@@ -279,6 +322,19 @@
       actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "rewrite", text: "의견서 다시 쓰기" }));
       actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "achievements", text: "업적" }));
     }
+    var cineId = ending ? endingCinema(ending.id) : data.id;
+    var cineExtra = ending ? WRONG_CINE[ending.id] : null;
+    if (SR.cinema && SR.cinema.has(cineId)) {
+      actions.appendChild(h("button", {
+        class: "btn",
+        type: "button",
+        "data-action": "replay-cine",
+        "data-cine-id": cineId,
+        "data-who": cineExtra ? cineExtra.who : "",
+        "data-alibi": cineExtra ? cineExtra.alibi : "",
+        text: "컷 다시 보기"
+      }));
+    }
     actions.appendChild(h("button", { class: "btn", type: "button", "data-action": "save", text: "저장" }));
     actions.appendChild(h("button", { class: "btn primary", type: "button", "data-action": "folders", text: "철로" }));
     view.appendChild(actions);
@@ -288,6 +344,7 @@
 
   function paintOverlay() {
     var card = h("div", { class: "overlay-card", role: "dialog", "aria-modal": "true" });
+    if (ui.overlay === "notebook") card.classList.add("notebook-card");
     if (ui.overlay === "manual") fillManual(card);
     else if (ui.overlay === "save") fillSave(card);
     else if (ui.overlay === "achievements") fillAchievements(card);
@@ -307,7 +364,7 @@
     });
     card.appendChild(table);
     SR.manual.rules.forEach(function (rule) { card.appendChild(h("p", { text: rule })); });
-    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기." }));
+    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기. 컷이 나올 때 Esc는 건너뛰기, Enter는 다음 장면입니다." }));
     card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
   }
 
@@ -369,18 +426,24 @@
   }
 
   function fillNotebook(card) {
-    card.appendChild(h("h2", { text: "수첩" }));
-    if (!state.scraps.length) card.appendChild(h("p", { text: "남긴 서류가 없습니다. 서류를 연 뒤 수첩에 남기기를 누르십시오." }));
+    var spiral = h("div", { class: "nb-spiral", "aria-hidden": "true" });
+    var i;
+    for (i = 0; i < 12; i++) spiral.appendChild(h("i"));
+    var page = h("div", { class: "nb-page" });
+    page.appendChild(h("h2", { text: "조사 수첩" }));
+    page.appendChild(h("p", { class: "nb-kicker", text: "한빛지방국세청  ·  특별조사2계" }));
+    if (!state.scraps.length) page.appendChild(h("p", { text: "아직 베껴 둔 줄이 없습니다. 서류를 연 뒤 수첩에 남기기를 누르십시오." }));
     state.scraps.forEach(function (s) {
-      var block = h("article", { class: "found-card" }, [
-        h("p", { class: "found-type", text: s.caseTitle + " · " + s.title })
-      ]);
-      (s.fields || []).slice(0, 4).forEach(function (f) {
-        block.appendChild(h("p", { text: f.label + "  " + f.value }));
+      var note = h("article", { class: "nb-note" });
+      note.appendChild(h("p", { class: "tape", text: s.caseTitle }));
+      note.appendChild(h("h3", { text: s.title }));
+      (s.fields || []).slice(0, 5).forEach(function (f) {
+        note.appendChild(h("p", { text: f.label + "   " + f.value }));
       });
-      card.appendChild(block);
+      page.appendChild(note);
     });
-    card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
+    page.appendChild(h("button", { class: "btn nb-close", type: "button", "data-action": "close-overlay", text: "수첩 덮기" }));
+    card.appendChild(h("div", { class: "notebook" }, [spiral, page]));
   }
 
   function fillReport(card) {
@@ -510,6 +573,17 @@
   function openCase(id) {
     var row = state.progress[id];
     if (!row || row.status === "locked") return;
+    if (id === "case06" && (state.seenCinema || []).indexOf("case06") < 0) {
+      state.seenCinema = state.seenCinema || [];
+      state.seenCinema.push("case06");
+      if (row.status === "new") row.status = "open";
+      ui.caseId = id;
+      ui.screen = "desk";
+      playing = true;
+      persist();
+      playCinema("case06", function () { openCase(id); });
+      return;
+    }
     if (row.status === "new") row.status = "open";
     ui.caseId = id;
     ui.docId = null;
@@ -620,11 +694,16 @@
     if (prog.rejects === 0 && prog.wrongFindings === 0) grant("clean");
     grant(data.id);
     ui.overlay = null;
+    ui.caseId = data.id;
     ui.screen = "epilogue";
     playing = true;
-    SR.audio.stamp();
     persist();
-    paint();
+    playCinema(data.id, function () {
+      ui.caseId = data.id;
+      ui.screen = "epilogue";
+      playing = true;
+      paint();
+    });
   }
 
   function commitEnding(id) {
@@ -653,13 +732,18 @@
     ui.overlay = null;
     ui.confirm = null;
     playing = true;
-    SR.audio.stamp();
     persist();
-    paint();
+    playCinema(endingCinema(ending.id), WRONG_CINE[ending.id] || {}, function () {
+      ui.caseId = "case06";
+      ui.screen = "epilogue";
+      playing = true;
+      paint();
+    });
   }
 
   function beginNew() {
     state = SR.store.blank();
+    state.place = { screen: "folders", caseId: null };
     SR.store.save(state);
     ui.caseId = null;
     ui.docId = null;
@@ -667,18 +751,27 @@
     ui.overlay = null;
     ui.confirm = null;
     ui.introPage = 0;
-    ui.screen = "intro";
     playing = true;
-    persist();
-    paint();
+    playCinema("open", function () {
+      state.introSeen = true;
+      ui.screen = "folders";
+      playing = true;
+      persist();
+      paint();
+    });
   }
 
   function resume() {
     if (!SR.store.dirty(state)) return;
     playing = true;
     if (!state.introSeen) {
-      ui.screen = "intro";
-      paint();
+      playCinema("open", function () {
+        state.introSeen = true;
+        ui.screen = "folders";
+        playing = true;
+        persist();
+        paint();
+      });
       return;
     }
     var place = state.place || {};
@@ -687,6 +780,19 @@
       ui.screen = "epilogue";
     } else if (place.screen === "desk" && place.caseId && state.progress[place.caseId] && state.progress[place.caseId].status !== "locked") {
       ui.caseId = place.caseId;
+      if (place.caseId === "case06" && (state.seenCinema || []).indexOf("case06") < 0) {
+        state.seenCinema = state.seenCinema || [];
+        state.seenCinema.push("case06");
+        ui.screen = "desk";
+        persist();
+        playCinema("case06", function () {
+          ui.caseId = "case06";
+          ui.screen = "desk";
+          playing = true;
+          paint();
+        });
+        return;
+      }
       ui.screen = "desk";
     } else if (place.screen === "epilogue" && place.caseId) {
       ui.caseId = place.caseId;
@@ -744,6 +850,25 @@
     }
     if (name === "continue") { resume(); return; }
     if (name === "intro-next") { ui.introPage = 1; paint(); return; }
+    if (name === "replay-open") {
+      playCinema("open", function () {
+        ui.screen = "title";
+        playing = false;
+        paint();
+      });
+      return;
+    }
+    if (name === "replay-cine") {
+      playCinema(el.getAttribute("data-cine-id"), {
+        who: el.getAttribute("data-who") || "",
+        alibi: el.getAttribute("data-alibi") || ""
+      }, function () {
+        ui.screen = "epilogue";
+        playing = true;
+        paint();
+      });
+      return;
+    }
     if (name === "intro-done") {
       state.introSeen = true;
       ui.screen = "folders";
@@ -825,14 +950,13 @@
       state = loaded;
       SR.audio.setMuted(state.mute);
       grant("resume");
+      pushToast("저장한 조사를 펼쳤습니다.");
       ui.overlay = null;
       ui.confirm = null;
       ui.docId = null;
       ui.pins = [];
       playing = true;
       resume();
-      pushToast("저장한 조사를 펼쳤습니다.");
-      paint();
       return;
     }
     if (name === "clear-slot") {
@@ -939,6 +1063,12 @@
   });
 
   document.addEventListener("keydown", function (e) {
+    if (ui.screen === "cinema" && cine) {
+      if (e.key === "Escape") { e.preventDefault(); cine.skip(); return; }
+      if (e.target && e.target.closest && e.target.closest("[data-cine='skip']")) return;
+      if (e.key === " " || e.key === "Enter" || e.key === "ArrowRight") { e.preventDefault(); cine.advance(); return; }
+      return;
+    }
     var tag = e.target && e.target.tagName;
     var typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
     if (e.key === "Escape") {
@@ -985,7 +1115,7 @@
       state.playMs += delta;
       var clock = document.getElementById("play-clock");
       if (clock) clock.textContent = formatMs(state.playMs);
-      if (state.playMs >= 40 * 60 * 1000 && grant("night")) paint();
+      if (state.playMs >= 40 * 60 * 1000 && grant("night") && ui.screen !== "cinema") paint();
     }
   }, 1000);
 
