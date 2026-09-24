@@ -429,13 +429,18 @@
       card.appendChild(h("p", { text: "이미 닫힌 철입니다. 종결 메모를 읽으십시오." }));
     } else {
       var rank = hintRank(prog);
+      var score = SR.store.scoreOf(prog);
       card.appendChild(h("p", { text: "메모는 볼 서류의 윤곽과 모순의 이름만 말합니다. 정답 이름은 적지 않습니다." }));
+      card.appendChild(h("p", { class: "mono", text: "이 철의 점수 " + score + "  ·  메모 한 장마다 -" + SR.store.HINT_COST }));
       if (!rank) card.appendChild(h("p", { class: "hint-slip", text: "아직 꺼낸 메모가 없습니다." }));
       data.hints.slice(0, rank).forEach(function (text, i) {
         card.appendChild(h("p", { class: "hint-slip", text: (i + 1) + ". " + text }));
       });
       if (rank < data.hints.length) {
-        card.appendChild(h("button", { class: "btn primary", type: "button", "data-action": "hint-more", text: rank ? "다음 메모" : "메모를 받는다" }));
+        card.appendChild(h("button", { class: "btn-hint", type: "button", "data-action": "hint-more" }, [
+          h("span", { class: "hint-word", text: rank ? "다음 메모" : "메모를 받는다" }),
+          h("span", { class: "hint-cost", text: "-" + SR.store.HINT_COST })
+        ]));
       }
     }
     card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
@@ -450,7 +455,7 @@
     });
     card.appendChild(table);
     SR.manual.rules.forEach(function (rule) { card.appendChild(h("p", { text: rule })); });
-    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기. 책상의 힌트는 과장 메모를 한 줄씩 꺼냅니다. 컷이 나올 때 Esc는 건너뛰기, Enter는 다음 장면입니다." }));
+    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기. 힌트 메모를 한 장 꺼내면 그 철의 점수가 15 깎입니다. 컷이 나올 때 Esc는 건너뛰기, Enter는 다음 장면입니다." }));
     card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
   }
 
@@ -484,11 +489,11 @@
     var grid = h("div", { class: "ach-grid" });
     SR.achievements.forEach(function (a) {
       var on = !!owned[a.id];
-      grid.appendChild(h("article", { class: "ach" + (on ? " on" : " locked") }, [
-        h("p", { class: "stamp mini", text: on ? "달성" : "봉인" }),
-        h("strong", { text: on ? a.name : "봉인된 도장" }),
-        h("p", { text: on ? a.text : a.hint })
-      ]));
+      var cardBits = [];
+      if (on) cardBits.push(h("p", { class: "stamp mini open", text: "달성" }));
+      cardBits.push(h("strong", { text: on ? a.name : "아직 없음" }));
+      cardBits.push(h("p", { text: on ? a.text : a.hint }));
+      grid.appendChild(h("article", { class: "ach" + (on ? " on" : " locked") }, cardBits));
     });
     card.appendChild(grid);
     card.appendChild(h("button", { class: "btn tiny", type: "button", "data-action": "clear-ach", text: "업적만 지우기" }));
@@ -932,6 +937,7 @@
       var hintProg = hintCase && state.progress[hintCase.id];
       if (hintProg && hintCase.hints && hintRank(hintProg) < hintCase.hints.length) {
         hintProg.hintLevel = hintRank(hintProg) + 1;
+        hintProg.score = Math.max(0, SR.store.scoreOf(hintProg) - SR.store.HINT_COST);
         persist();
       }
       ui.overlay = "hint";

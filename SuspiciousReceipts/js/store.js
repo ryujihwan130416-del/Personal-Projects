@@ -5,6 +5,13 @@
   var SLOTS = "suspiciousReceipts.slots.v1";
   var META = "suspiciousReceipts.achievements.v1";
   var ORDER = ["case00", "case01", "case02", "case03", "case04", "case05", "case06"];
+  var HINT_COST = 15;
+
+  function scoreOf(row) {
+    if (row && typeof row.score === "number" && !isNaN(row.score)) return Math.max(0, Math.round(row.score));
+    var level = row ? Number(row.hintLevel) || 0 : 0;
+    return Math.max(0, 100 - level * HINT_COST);
+  }
 
   function blankProgress() {
     var progress = {};
@@ -15,6 +22,7 @@
         rejects: 0,
         wrongFindings: 0,
         hintLevel: 0,
+        score: 100,
         notes: {}
       };
     });
@@ -78,6 +86,7 @@
         rejects: Number(row.rejects) || 0,
         wrongFindings: Number(row.wrongFindings) || 0,
         hintLevel: Number(row.hintLevel) || 0,
+        score: scoreOf(row),
         notes: row.notes || {}
       };
     });
@@ -204,6 +213,8 @@
   SR.store = {
     KEY: KEY,
     ORDER: ORDER,
+    HINT_COST: HINT_COST,
+    scoreOf: scoreOf,
     blank: blank,
     load: load,
     save: save,

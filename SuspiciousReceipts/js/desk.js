@@ -72,7 +72,7 @@
 
     var step = tutorialStep(data, ui, prog, state);
     var desk = h("section", { class: "desk" });
-    desk.appendChild(header(data, haveNeed, need.length, closed, step));
+    desk.appendChild(header(data, prog, haveNeed, need.length, closed, step));
     if (step) desk.appendChild(coach(step.text));
 
     var body = h("div", { class: "desk-body" });
@@ -106,13 +106,14 @@
     return step && step.pulse === key ? " tutor" : "";
   }
 
-  function header(data, haveNeed, needCount, closed, step) {
+  function header(data, prog, haveNeed, needCount, closed, step) {
     var chips = [
       h("span", { class: "chip", text: data.difficulty }),
       h("span", { class: "chip", id: "play-clock", text: "" })
     ];
     if (needCount) chips.push(h("span", { class: "chip" + (haveNeed === needCount ? " ready" : ""), text: "필수 " + haveNeed + "/" + needCount }));
     else chips.push(h("span", { class: "chip", text: closed ? "마감" : "의견서" }));
+    chips.push(h("span", { class: "chip score-chip", text: "점수 " + SR.store.scoreOf(prog) }));
     return h("header", { class: "desk-bar" }, [
       h("div", { class: "bar-title" }, [
         h("p", { class: "kicker", text: "한빛지방국세청 · 특별조사2계" }),
@@ -120,7 +121,10 @@
         h("p", { class: "question", text: data.question })
       ]),
       h("div", { class: "bar-actions" }, chips.concat([
-        h("button", { class: "btn btn-on-dark", type: "button", "data-action": "hint", text: "힌트" }),
+        h("button", { class: "btn-hint" + tutorClass(step, "hint"), type: "button", "data-action": "hint" }, [
+          h("span", { class: "hint-word", text: "힌트" }),
+          h("span", { class: "hint-cost", text: "-" + SR.store.HINT_COST })
+        ]),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "manual", text: "매뉴얼" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "people", text: "인물" }),
         h("button", { class: "btn btn-on-dark", type: "button", "data-action": "notebook", text: "수첩" }),
