@@ -23,6 +23,7 @@
         wrongFindings: 0,
         hintLevel: 0,
         score: 100,
+        failed: false,
         notes: {}
       };
     });
@@ -93,6 +94,7 @@
         wrongFindings: Number(row.wrongFindings) || 0,
         hintLevel: Number(row.hintLevel) || 0,
         score: scoreOf(row),
+        failed: !!row.failed,
         notes: row.notes || {}
       };
     });

@@ -371,18 +371,40 @@
     node.style.left = spec.x + "px";
     node.style.top = spec.y + "px";
     node.style.zIndex = String(spec.z);
-    node.style.transform = "translateZ(18px) rotate(" + spec.rot + "deg)";
-    node.appendChild(paper(doc));
+    var angle = ((spec.rot % 360) + 360) % 360;
+    var side = (angle > 45 && angle < 135) || (angle > 225 && angle < 315);
+    var sheet = h("div", { class: "slip-sheet" });
+    sheet.style.transform = "rotate(" + spec.rot + "deg)";
+    sheet.appendChild(paper(doc));
+    node.appendChild(sheet);
+    if (side) node.classList.add("side");
     if (ui.docId === doc.id) {
       var scrapped = state.scraps.some(function (s) { return s.caseId === data.id && s.docId === doc.id; });
-      node.appendChild(h("div", { class: "slip-actions" }, [
+      var actions = h("div", { class: "slip-actions" }, [
+        h("button", { class: "btn tiny", type: "button", "data-action": "turn", "data-doc": doc.id, text: "돌리기" }),
         h("button", { class: "btn tiny" + tutorClass(step, "pin"), type: "button", "data-action": "pin", "data-doc": doc.id, text: "대조에 올리기" }),
         h("button", { class: "btn tiny", type: "button", "data-action": "scrap", text: scrapped ? "수첩에 있음" : "수첩에 남기기" }),
         h("button", { class: "btn tiny", type: "button", "data-action": "draw-in", "data-doc": doc.id, text: "서랍에 넣기" })
-      ]));
-      if (closed) node.appendChild(h("p", { class: "closed-note", text: "종결된 철입니다." }));
+      ]);
+      if (closed) actions.appendChild(h("p", { class: "closed-note", text: "종결된 철입니다." }));
+      node.appendChild(actions);
     }
     return node;
+  }
+
+  function placeSlipNotes(world, ui) {
+    var scale = (ui.view && ui.view.scale) || 1;
+    world.querySelectorAll(".slip.side").forEach(function (slip) {
+      var sheet = slip.querySelector(".slip-sheet");
+      var actions = slip.querySelector(".slip-actions");
+      if (!sheet || !actions) return;
+      var sr = sheet.getBoundingClientRect();
+      var pr = slip.getBoundingClientRect();
+      actions.style.position = "absolute";
+      actions.style.left = ((sr.right - pr.left) / scale + 12) + "px";
+      actions.style.top = Math.max(0, (sr.top - pr.top) / scale) + "px";
+      actions.style.margin = "0";
+    });
   }
 
   function bindFileDrag(desk, ui) {
@@ -471,7 +493,7 @@
       ui.view.ready = true;
     }
     applyView(world, ui);
-    var desk = view.parentElement;
+    placeSlipNotes(world, ui);
     desk.querySelectorAll("[data-pc]").forEach(function (el) {
       el.addEventListener("click", function (e) {
         e.stopPropagation();

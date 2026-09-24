@@ -430,18 +430,20 @@
     } else {
       var rank = hintRank(prog);
       var score = SR.store.scoreOf(prog);
-      card.appendChild(h("p", { text: "메모는 볼 서류의 윤곽과 모순의 이름만 말합니다. 정답 이름은 적지 않습니다." }));
+      card.appendChild(h("p", { text: "첫 메모는 볼 서류만 가리킵니다. 그 다음 메모부터는 모순의 이름이 적혀 있고, 받으면 이 철은 실패입니다." }));
       card.appendChild(h("p", { class: "mono", text: "이 철의 점수 " + score + "  ·  메모 한 장마다 -" + SR.store.HINT_COST }));
       if (!rank) card.appendChild(h("p", { class: "hint-slip", text: "아직 꺼낸 메모가 없습니다." }));
       data.hints.slice(0, rank).forEach(function (text, i) {
         card.appendChild(h("p", { class: "hint-slip", text: (i + 1) + ". " + text }));
       });
       if (rank < data.hints.length) {
+        var spoil = rank + 1 >= 2;
         card.appendChild(h("button", { class: "btn-hint", type: "button", "data-action": "hint-more" }, [
-          h("span", { class: "hint-word", text: rank ? "다음 메모" : "메모를 받는다" }),
-          h("span", { class: "hint-cost", text: "-" + SR.store.HINT_COST })
+          h("span", { class: "hint-word", text: spoil ? "정답 메모" : (rank ? "다음 메모" : "메모를 받는다") }),
+          h("span", { class: "hint-cost", text: spoil ? "실패" : ("-" + SR.store.HINT_COST) })
         ]));
       }
+      if (prog.failed) card.appendChild(h("p", { class: "hint-slip", text: "이 철은 실패입니다. 정답 메모를 받았습니다." }));
     }
     card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
   }
@@ -800,7 +802,7 @@
       return;
     }
     prog.status = "closed";
-    if (prog.rejects === 0 && prog.wrongFindings === 0) grant("clean");
+    if (prog.rejects === 0 && prog.wrongFindings === 0 && !prog.failed) grant("clean");
     grant(data.id);
     ui.overlay = null;
     ui.caseId = data.id;
@@ -835,7 +837,7 @@
     } else {
       grant(ending.achievement);
     }
-    if (prog.rejects === 0 && prog.wrongFindings === 0 && ending.id.indexOf("wrong") !== 0) grant("clean");
+    if (prog.rejects === 0 && prog.wrongFindings === 0 && !prog.failed && ending.id.indexOf("wrong") !== 0) grant("clean");
     ui.caseId = "case06";
     ui.screen = "epilogue";
     ui.overlay = null;
@@ -942,8 +944,15 @@
       var hintCase = SR.caseById(ui.caseId);
       var hintProg = hintCase && state.progress[hintCase.id];
       if (hintProg && hintCase.hints && hintRank(hintProg) < hintCase.hints.length) {
-        hintProg.hintLevel = hintRank(hintProg) + 1;
-        hintProg.score = Math.max(0, SR.store.scoreOf(hintProg) - SR.store.HINT_COST);
+        var nextHint = hintRank(hintProg) + 1;
+        hintProg.hintLevel = nextHint;
+        if (nextHint >= 2) {
+          hintProg.failed = true;
+          hintProg.score = 0;
+          pushToast("정답이 적힌 메모입니다. 이 철은 실패입니다.");
+        } else {
+          hintProg.score = Math.max(0, SR.store.scoreOf(hintProg) - SR.store.HINT_COST);
+        }
         persist();
       }
       ui.overlay = "hint";
@@ -1058,6 +1067,15 @@
     if (name === "note-open") { ui.noteOpen = true; paint(); return; }
     if (name === "note-close") { ui.noteOpen = false; paint(); return; }
     if (name === "open-doc") { openDoc(el.getAttribute("data-doc")); return; }
+    if (name === "turn") {
+      var turnId = el.getAttribute("data-doc") || ui.docId;
+      var turnSpec = ui.papers && ui.papers[turnId];
+      if (!turnSpec) return;
+      turnSpec.rot = Math.round(turnSpec.rot / 90) * 90 + 90;
+      turnSpec.rot = ((turnSpec.rot % 360) + 360) % 360;
+      paint();
+      return;
+    }
     if (name === "pin") {
       var id = el.getAttribute("data-doc") || ui.docId;
       if (!id) return;

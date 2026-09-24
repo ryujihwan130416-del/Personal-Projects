@@ -111,14 +111,28 @@
 }
 .slip {
   position: absolute;
-  width: 230px;
+  width: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   cursor: grab;
   filter: drop-shadow(0 12px 10px rgba(0, 0, 0, 0.35));
 }
+.slip-sheet { width: 230px; flex: 0 0 auto; transform-origin: center center; }
 .slip .paper { width: 230px; margin: 0; }
 .slip.dim { opacity: 0.38; }
 .slip.picked { z-index: 20; filter: drop-shadow(0 16px 16px rgba(0, 0, 0, 0.45)); }
-.slip-actions { display: flex; gap: 0.3rem; margin-top: 0.35rem; }
+.slip-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; max-width: 230px; }
+.slip.side .slip-actions {
+  position: absolute;
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 0;
+  width: max-content;
+  max-width: none;
+  z-index: 2;
+}
+.slip.side .slip-actions .btn { white-space: nowrap; }
 .monitor {
   appearance: none;
   position: absolute;
@@ -522,13 +536,16 @@
 
 .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-bottom: 0.45rem; }
 .filter { display: grid; gap: 0.15rem; font-size: 0.75rem; color: #e6d8c2; }
-.filter select, .search, .file-form input, .memo textarea, .overlay-card select {
+.filter select, .search, .file-form input, .file-form select, .memo textarea, .overlay-card select,
+#crime-select, #person-select, #filing-type {
   background: #f4ead9;
-  color: var(--ink);
+  color: #1c1915;
+  color-scheme: light;
   border: 1px solid #cbbfa8;
   min-height: 36px;
   padding: 0.25rem 0.4rem;
 }
+#crime-select option, #person-select option, #filing-type option { background: #f4ead9; color: #1c1915; }
 .search { grid-column: 1 / -1; }
 .doc-list, .timeline, .found-list, .paper-stage { overflow: auto; min-height: 0; }
 .doc-list { display: grid; align-content: start; gap: 0.35rem; }
