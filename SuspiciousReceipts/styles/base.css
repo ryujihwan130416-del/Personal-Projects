@@ -46,7 +46,9 @@ button { cursor: pointer; }
   padding: 0.45rem 0.9rem;
   border-radius: 2px;
 }
-.btn.primary { background: var(--green); color: #f6f1e6; border-color: #163828; }
+.btn.primary { background: var(--green); color: #f6f1e6; border-color: #163828; box-shadow: 0 2px 0 #0e2418; }
+.btn:hover { filter: brightness(1.06); }
+.btn:active { transform: translateY(1px); }
 .btn.danger { background: var(--stamp); color: #fff8f4; border-color: #6d1212; }
 .btn.tiny { min-height: 36px; padding: 0.25rem 0.55rem; font-size: 0.86rem; }
 .btn:disabled, .btn.off { opacity: 0.45; cursor: not-allowed; }

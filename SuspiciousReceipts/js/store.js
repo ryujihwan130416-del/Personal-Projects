@@ -14,6 +14,7 @@
         found: [],
         rejects: 0,
         wrongFindings: 0,
+        hintLevel: 0,
         notes: {}
       };
     });
@@ -76,6 +77,7 @@
         found: Array.isArray(row.found) ? row.found.slice() : [],
         rejects: Number(row.rejects) || 0,
         wrongFindings: Number(row.wrongFindings) || 0,
+        hintLevel: Number(row.hintLevel) || 0,
         notes: row.notes || {}
       };
     });

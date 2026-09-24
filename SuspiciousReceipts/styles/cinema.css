@@ -35,7 +35,7 @@
 
 .cine-frame {
   position: relative;
-  width: min(1100px, 100%);
+  width: min(1280px, 100%);
   margin: 0 auto;
   aspect-ratio: 16 / 9;
   background: #090807;
@@ -200,6 +200,7 @@
 .anim-flicker { animation: cine-flicker 3.4s infinite; }
 .anim-slide { opacity: 0; transform: translateY(24px); animation: cine-slide 0.9s ease forwards 0.25s; }
 .anim-slam { opacity: 0; transform: scale(1.55) rotate(-8deg); transform-box: fill-box; transform-origin: center; animation: cine-slam 0.38s cubic-bezier(0.16, 1.4, 0.4, 1) forwards 1.15s; }
+.anim-rise { opacity: 0; transform: translateY(78px); transform-box: fill-box; transform-origin: center; animation: cine-rise 0.85s cubic-bezier(0.16, 0.9, 0.3, 1) forwards 0.55s; }
 .anim-fade-late { opacity: 0; animation: cine-fade 0.55s ease forwards 1.15s; }
 .anim-fade-later { opacity: 0; animation: cine-fade 0.55s ease forwards 1.7s; }
 .anim-out { animation: cine-out 0.55s ease forwards 1.05s; }
@@ -217,6 +218,7 @@
 .cinema-still .anim-flicker,
 .cinema-still .anim-slide,
 .cinema-still .anim-slam,
+.cinema-still .anim-rise,
 .cinema-still .anim-fade-late,
 .cinema-still .anim-fade-later,
 .cinema-still .anim-out,
@@ -238,6 +240,7 @@
 }
 .cinema-still .anim-slide,
 .cinema-still .anim-slam,
+.cinema-still .anim-rise,
 .cinema-still .anim-fade-late,
 .cinema-still .anim-fade-later,
 .cinema-still .anim-drop,
@@ -264,6 +267,7 @@
 @keyframes cine-flicker { 0%, 100% { opacity: 0.78; } 47% { opacity: 0.55; } 52% { opacity: 1; } }
 @keyframes cine-slide { to { opacity: 1; transform: none; } }
 @keyframes cine-slam { to { opacity: 1; transform: scale(1) rotate(-8deg); } }
+@keyframes cine-rise { 70% { opacity: 1; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 @keyframes cine-fade { to { opacity: 1; } }
 @keyframes cine-out { to { opacity: 0; } }
 @keyframes cine-draw { to { stroke-dashoffset: 0; } }

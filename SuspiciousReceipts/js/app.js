@@ -28,9 +28,56 @@
   var playing = false;
   var cine = null;
   var WRONG_CINE = {
-    "wrong-kim": { who: "김하늘", alibi: "회식 시각, 그는 북원 시네마에 있었습니다." },
-    "wrong-bae": { who: "배수아", alibi: "분식과 택시는 그 시각의 자리만 보여줄 뿐입니다." },
-    "wrong-choi": { who: "최민재", alibi: "통장의 이름과 도장의 이름은 다릅니다." }
+    "wrong-kim": {
+      who: "김하늘",
+      head: "김하늘",
+      alibi: "김하늘은 회식 시각에 북원 시네마에 있었습니다. 결재란은 윤가람입니다.",
+      lines: ["21:10  북원 시네마", "회식 서명과 같은 시각", "결재란  윤가람", "번호  청람유통"]
+    },
+    "wrong-bae": {
+      who: "배수아",
+      head: "배수아",
+      alibi: "배수아의 분식과 택시는 그 시각의 자리일 뿐입니다. 도장은 윤가람입니다.",
+      lines: ["북원 분식  배수아", "서구 택시  배수아", "결재란  윤가람", "창구와 도장은 다릅니다"]
+    },
+    "wrong-choi": {
+      who: "최민재",
+      head: "최민재",
+      alibi: "최민재는 돈을 받은 사람입니다. 도장과 계좌 이름은 윤가람, 청람유통입니다.",
+      lines: ["입금  최민재  상담료", "도장  윤가람", "예금주  청람유통", "받은 사람과 정점은 다릅니다"]
+    }
+  };
+  var MISS = {
+    case00: {
+      person: ["연습 전표의 이름은 서도담입니다."],
+      crime: ["위반 이름은 연습 오독입니다.", "허위 야근이 아닙니다."],
+      findings: ["100번은 18:10과 18:22 사이", "18:40은 나중에 쓴 시각", "커피 영수증은 시각이 맞음"]
+    },
+    case01: {
+      person: ["이 철의 이름은 박도윤입니다.", "정도현의 택시는 다른 사람입니다."],
+      crime: ["위반은 허위 야근입니다.", "횡령이나 비자금이 아닙니다."],
+      findings: ["4820은 21:02와 21:40 사이", "22:14는 나중에 쓴 시각", "남해 카드는 본사 출입 안"]
+    },
+    case02: {
+      person: ["청구와 카드의 이름은 최민재입니다.", "윤가람은 결재란만입니다."],
+      crime: ["위반은 비자금 수수입니다.", "허위 야근이나 위조가 아닙니다."],
+      findings: ["토너 줄과 얼라인먼트", "부품이 급여의 세 배", "지급인  청람유통"]
+    },
+    case03: {
+      person: ["42만 원의 사용자는 한서준입니다.", "배수아는 오답으로 남아 있습니다."],
+      crime: ["위반은 허위 경비입니다.", "야근이나 비자금이 아닙니다."],
+      findings: ["북원 08:20  강남 09:05", "간격 45분, 최소 150분", "B-220은 폐업 상호"]
+    },
+    case04: {
+      person: ["청구하고 결재한 이름은 윤가람입니다.", "김하늘은 그 시각 북원에 있습니다."],
+      crime: ["위반은 허위 회식입니다.", "야근이나 위조만은 아닙니다."],
+      findings: ["서명 18, 스테이크 6", "김하늘  북원 영화", "간판 금강루, 등록 청람유통"]
+    },
+    case05: {
+      person: ["계약과 결재의 이름은 윤가람입니다.", "최민재는 돈을 받은 사람입니다."],
+      crime: ["위반은 허위 자문입니다.", "비자금 수수나 야근이 아닙니다."],
+      findings: ["블루컨설팅 번호는 청람유통", "같은 날 6,000,000 세 장", "예금주  청람유통"]
+    }
   };
   var NEED_LABEL = { "f-sign": "결재연결", "f-org": "조직연결", "f-port": "항만의 조직연결" };
 
@@ -201,13 +248,25 @@
   }
 
   function sampleReceipt() {
-    return h("aside", { class: "sample-receipt", "aria-hidden": "true" }, [
-      h("p", { class: "paper-kicker", text: "견본 전표" }),
-      h("h3", { text: "샘플 상점" }),
-      h("p", { text: "이 종이는 장식이라 사건이 아닙니다." }),
-      h("p", { class: "mono", text: "000-00-00000" }),
-      h("p", { class: "mono", text: "0원" })
-    ]);
+    var doc = {
+      id: "title-slip",
+      kind: "receipt",
+      title: "골목등대",
+      fields: [
+        { label: "상호", value: "골목등대 분식" },
+        { label: "주소", value: "한빛시 중구 당직길 3" },
+        { label: "사업자번호", value: "305-19-44018" },
+        { label: "단말기", value: "G-02" },
+        { label: "영수증번호", value: "1184" },
+        { label: "일시", value: "2026-03-02 02:16" },
+        { label: "품목", value: "김밥 1  우동 1" },
+        { label: "결제", value: "현금" },
+        { label: "합계", value: "7,000원" }
+      ]
+    };
+    var slip = h("aside", { class: "sample-receipt", "aria-hidden": "true" });
+    slip.appendChild(SR.dom.paper(doc));
+    return slip;
   }
 
   function paintIntro() {
@@ -351,8 +410,35 @@
     else if (ui.overlay === "people") fillPeople(card);
     else if (ui.overlay === "notebook") fillNotebook(card);
     else if (ui.overlay === "report") fillReport(card);
+    else if (ui.overlay === "hint") fillHint(card);
     var back = h("div", { class: "overlay" }, [card]);
     return back;
+  }
+
+  function hintRank(prog) {
+    return Math.max(prog.hintLevel || 0, prog.rejects >= 4 ? 2 : prog.rejects >= 2 ? 1 : 0);
+  }
+
+  function fillHint(card) {
+    var data = SR.caseById(ui.caseId);
+    var prog = data && state.progress[data.id];
+    card.appendChild(h("h2", { text: "과장 메모" }));
+    if (!data || !prog || !data.hints) {
+      card.appendChild(h("p", { text: "이 철에는 메모가 없습니다." }));
+    } else if (prog.status === "closed") {
+      card.appendChild(h("p", { text: "이미 닫힌 철입니다. 종결 메모를 읽으십시오." }));
+    } else {
+      var rank = hintRank(prog);
+      card.appendChild(h("p", { text: "메모는 볼 서류의 윤곽과 모순의 이름만 말합니다. 정답 이름은 적지 않습니다." }));
+      if (!rank) card.appendChild(h("p", { class: "hint-slip", text: "아직 꺼낸 메모가 없습니다." }));
+      data.hints.slice(0, rank).forEach(function (text, i) {
+        card.appendChild(h("p", { class: "hint-slip", text: (i + 1) + ". " + text }));
+      });
+      if (rank < data.hints.length) {
+        card.appendChild(h("button", { class: "btn primary", type: "button", "data-action": "hint-more", text: rank ? "다음 메모" : "메모를 받는다" }));
+      }
+    }
+    card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
   }
 
   function fillManual(card) {
@@ -364,7 +450,7 @@
     });
     card.appendChild(table);
     SR.manual.rules.forEach(function (rule) { card.appendChild(h("p", { text: rule })); });
-    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기. 컷이 나올 때 Esc는 건너뛰기, Enter는 다음 장면입니다." }));
+    card.appendChild(h("p", { text: "단축키: J K 목록, Enter 열기, C 대조, F 지적, B 수첩, N 수첩 보기, M 매뉴얼, R 보고서, Esc 닫기. 책상의 힌트는 과장 메모를 한 줄씩 꺼냅니다. 컷이 나올 때 Esc는 건너뛰기, Enter는 다음 장면입니다." }));
     card.appendChild(h("button", { class: "btn", type: "button", "data-action": "close-overlay", text: "닫기" }));
   }
 
@@ -686,8 +772,20 @@
       };
       ui.reportMsg = msg[res.reason] || "근거가 모자랍니다.";
       SR.audio.reject();
+      ui.overlay = null;
       persist();
-      paint();
+      var pack = (MISS[data.id] && MISS[data.id][res.reason]) || MISS[data.id] && MISS[data.id].findings || ["서류를 다시 읽으십시오."];
+      playCinema("miss", {
+        head: "사실",
+        lines: pack,
+        caption: pack[0]
+      }, function () {
+        ui.caseId = data.id;
+        ui.screen = "desk";
+        ui.overlay = "report";
+        playing = true;
+        paint();
+      });
       return;
     }
     prog.status = "closed";
@@ -828,6 +926,18 @@
       paint();
       return;
     }
+    if (name === "hint") { ui.overlay = "hint"; paint(); return; }
+    if (name === "hint-more") {
+      var hintCase = SR.caseById(ui.caseId);
+      var hintProg = hintCase && state.progress[hintCase.id];
+      if (hintProg && hintCase.hints && hintRank(hintProg) < hintCase.hints.length) {
+        hintProg.hintLevel = hintRank(hintProg) + 1;
+        persist();
+      }
+      ui.overlay = "hint";
+      paint();
+      return;
+    }
     if (name === "manual") { ui.overlay = "manual"; paint(); return; }
     if (name === "achievements") { ui.overlay = "achievements"; paint(); return; }
     if (name === "people") { ui.overlay = "people"; paint(); return; }
@@ -859,10 +969,8 @@
       return;
     }
     if (name === "replay-cine") {
-      playCinema(el.getAttribute("data-cine-id"), {
-        who: el.getAttribute("data-who") || "",
-        alibi: el.getAttribute("data-alibi") || ""
-      }, function () {
+      var cineKey = el.getAttribute("data-cine-id");
+      playCinema(cineKey, WRONG_CINE[cineKey] || WRONG_CINE[state.endingId] || {}, function () {
         ui.screen = "epilogue";
         playing = true;
         paint();

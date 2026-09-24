@@ -1,11 +1,14 @@
 .title-screen {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 40rem) minmax(180px, 240px);
+  grid-template-columns: minmax(0, 40rem) minmax(220px, 280px);
   align-items: center;
   justify-content: center;
   gap: 4vw;
   padding: 8vh 8vw;
+  background:
+    radial-gradient(ellipse at 70% 80%, rgba(231, 194, 122, 0.16), transparent 42%),
+    radial-gradient(ellipse at 12% 0%, rgba(0, 0, 0, 0.35), transparent 40%);
 }
 .intro, .epilogue {
   min-height: 100vh;
@@ -26,34 +29,42 @@
 .title-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
 .footnote { color: #cbbfa8; max-width: 36rem; }
 .sample-receipt {
-  width: 220px;
+  width: min(280px, 100%);
   justify-self: end;
-  transform: rotate(2deg);
-  background: var(--paper);
-  color: var(--ink);
-  padding: 1rem;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+  transform: rotate(2.5deg);
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.45));
 }
-.sample-receipt h3 { margin: 0.2rem 0; }
+.sample-receipt .paper { margin: 0; }
 
-.folders { min-height: 100vh; display: flex; flex-direction: column; }
+.folders {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(231, 194, 122, 0.08), transparent 36%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 18px),
+    #2a211b;
+}
 .folder-grid {
+  width: min(1440px, 100%);
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.9rem;
-  padding: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem 1rem;
+  padding: 1.3rem 1.4rem 1.6rem;
 }
 .folder {
   text-align: left;
-  background: #e6d3a1;
+  background:
+    linear-gradient(180deg, #f0e2bf 0 18px, #e6d3a1 18px);
   color: var(--ink);
   border: 0;
-  min-height: 190px;
-  padding: 0.9rem 0.95rem 1rem;
+  min-height: 200px;
+  padding: 1.15rem 0.95rem 1rem;
   display: grid;
   align-content: start;
   gap: 0.35rem;
-  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 14px 0 #c9b27a, 0 18px 28px rgba(0, 0, 0, 0.28);
   position: relative;
 }
 .folder::before {
@@ -110,6 +121,9 @@
   background: rgba(244, 234, 217, 0.92);
 }
 
+@media (max-width: 1100px) {
+  .folder-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 900px) {
   .folder-grid { grid-template-columns: 1fr; }
   .title-screen { grid-template-columns: 1fr; }
