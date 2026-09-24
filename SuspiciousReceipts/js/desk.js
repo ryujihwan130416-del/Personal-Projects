@@ -75,13 +75,223 @@
     desk.appendChild(header(data, prog, haveNeed, need.length, closed, step));
     if (step) desk.appendChild(coach(step.text));
 
-    var body = h("div", { class: "desk-body" });
-    body.appendChild(listCol(data, list, ui, state, step));
-    body.appendChild(readCol(data, open, state, closed, ui, step));
-    body.appendChild(sideCol(data, prog, closed));
-    desk.appendChild(body);
-    desk.appendChild(compareCol(data, ui, closed, step));
+    ensureLay(ui, data);
+    var view = h("div", { class: "desk-view" });
+    var world = h("div", { class: "desk-world" });
+    world.appendChild(scenery());
+    world.appendChild(computer(data, list, ui, state, prog, closed, step));
+    var shown = {};
+    list.forEach(function (doc) { shown[doc.id] = true; });
+    data.docs.forEach(function (doc) {
+      world.appendChild(slip(doc, data, ui, state, closed, step, !!shown[doc.id]));
+    });
+    view.appendChild(world);
+    view.appendChild(h("div", { class: "zoom-bar" }, [
+      h("button", { type: "button", class: "zoom-btn", "data-zoom": "in", text: "확대" }),
+      h("button", { type: "button", class: "zoom-btn", "data-zoom": "out", text: "축소" }),
+      h("button", { type: "button", class: "zoom-btn", "data-zoom": "fit", text: "책상 전체" })
+    ]));
+    desk.appendChild(view);
     parent.appendChild(desk);
+    bindDesk(view, world, ui);
+  }
+
+  var DESK_W = 1760;
+  var DESK_H = 1080;
+
+  function ensureLay(ui, data) {
+    if (!ui.view) ui.view = { scale: 0.45, x: 20, y: 12, ready: false };
+    if (ui.paperCase === data.id && ui.papers) return;
+    ui.paperCase = data.id;
+    ui.papers = {};
+    ui.slipZ = 4;
+    data.docs.forEach(function (doc, i) {
+      var col = i % 4;
+      var row = Math.floor(i / 4);
+      ui.papers[doc.id] = {
+        x: 640 + col * 260 + (i % 2) * 18,
+        y: 70 + row * 250,
+        rot: Math.round((Math.random() * 30 - 15) * 10) / 10,
+        z: i + 2
+      };
+    });
+  }
+
+  function scenery() {
+    var now = new Date();
+    var hour = (now.getHours() % 12) * 30 + now.getMinutes() * 0.5;
+    var minute = now.getMinutes() * 6;
+    return h("div", { class: "scenery", "aria-hidden": "true" }, [
+      h("div", { class: "lamp" }),
+      h("div", { class: "clock" }, [
+        h("span", { class: "clock-face" }),
+        h("i", { class: "hand hour", style: "transform:rotate(" + hour + "deg)" }),
+        h("i", { class: "hand min", style: "transform:rotate(" + minute + "deg)" })
+      ]),
+      h("div", { class: "pencil a" }),
+      h("div", { class: "pencil b" }),
+      h("div", { class: "pencil c" }),
+      h("div", { class: "mug" }),
+      h("div", { class: "stamp-pad" }, [h("span", { text: "착수" })])
+    ]);
+  }
+
+  function computer(data, list, ui, state, prog, closed, step) {
+    var screen = h("div", { class: "screen" });
+    screen.appendChild(h("p", { class: "screen-kicker", text: "단말기  ·  특별조사2계" }));
+    screen.appendChild(h("p", { class: "screen-brief", text: data.briefing }));
+    screen.appendChild(listCol(data, list, ui, state, step));
+    screen.appendChild(sideCol(data, prog, closed));
+    screen.appendChild(compareCol(data, ui, closed, step));
+    screen.appendChild(h("label", { class: "memo" }, [
+      h("span", { text: "사건 메모" }),
+      h("textarea", { id: "case-memo", rows: "2", placeholder: "채점하지 않습니다. 이 브라우저에 남습니다." }, [state.memos[data.id] || ""])
+    ]));
+    return h("section", { class: "monitor" }, [
+      h("div", { class: "bezel" }, [screen]),
+      h("div", { class: "stand" }),
+      h("div", { class: "keyboard" }),
+      h("div", { class: "mouse" })
+    ]);
+  }
+
+  function slip(doc, data, ui, state, closed, step, shown) {
+    var spec = ui.papers[doc.id];
+    var node = h("article", {
+      class: "slip" + (ui.docId === doc.id ? " picked" : "") + (shown ? "" : " dim") + tutorClass(step, "doc:" + doc.id),
+      "data-slip": doc.id,
+      "data-action": "open-doc",
+      "data-doc": doc.id
+    });
+    node.style.left = spec.x + "px";
+    node.style.top = spec.y + "px";
+    node.style.zIndex = String(spec.z);
+    node.style.transform = "rotate(" + spec.rot + "deg)";
+    node.appendChild(paper(doc));
+    if (ui.docId === doc.id) {
+      var scrapped = state.scraps.some(function (s) { return s.caseId === data.id && s.docId === doc.id; });
+      node.appendChild(h("div", { class: "slip-actions" }, [
+        h("button", { class: "btn tiny" + tutorClass(step, "pin"), type: "button", "data-action": "pin", "data-doc": doc.id, text: "대조에 올리기" }),
+        h("button", { class: "btn tiny", type: "button", "data-action": "scrap", text: scrapped ? "수첩에 있음" : "수첩에 남기기" })
+      ]));
+      if (closed) node.appendChild(h("p", { class: "closed-note", text: "종결된 철입니다." }));
+    }
+    return node;
+  }
+
+  function applyView(world, ui) {
+    var v = ui.view;
+    world.style.transform = "translate(" + v.x + "px," + v.y + "px) scale(" + v.scale + ")";
+  }
+
+  function fitDesk(view, ui) {
+    var rect = view.getBoundingClientRect();
+    if (rect.width < 40 || rect.height < 40) return;
+    var scale = Math.min(rect.width / DESK_W, rect.height / DESK_H);
+    ui.view.min = scale;
+    ui.view.scale = scale;
+    ui.view.x = (rect.width - DESK_W * scale) / 2;
+    ui.view.y = (rect.height - DESK_H * scale) / 2;
+  }
+
+  function zoomAt(view, ui, next, clientX, clientY) {
+    var rect = view.getBoundingClientRect();
+    var min = ui.view.min || 0.2;
+    next = Math.max(min, Math.min(1.7, next));
+    var wx = (clientX - rect.left - ui.view.x) / ui.view.scale;
+    var wy = (clientY - rect.top - ui.view.y) / ui.view.scale;
+    ui.view.scale = next;
+    ui.view.x = clientX - rect.left - wx * next;
+    ui.view.y = clientY - rect.top - wy * next;
+  }
+
+  function bindDesk(view, world, ui) {
+    if (!ui.view.ready) {
+      fitDesk(view, ui);
+      ui.view.ready = true;
+    }
+    applyView(world, ui);
+    view.querySelectorAll("[data-zoom]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var kind = btn.getAttribute("data-zoom");
+        var rect = view.getBoundingClientRect();
+        var cx = rect.left + rect.width / 2;
+        var cy = rect.top + rect.height / 2;
+        if (kind === "fit") fitDesk(view, ui);
+        else zoomAt(view, ui, ui.view.scale * (kind === "in" ? 1.2 : 1 / 1.2), cx, cy);
+        applyView(world, ui);
+      });
+    });
+    view.addEventListener("wheel", function (e) {
+      if (e.target.closest(".screen")) return;
+      e.preventDefault();
+      var factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+      zoomAt(view, ui, ui.view.scale * factor, e.clientX, e.clientY);
+      applyView(world, ui);
+    }, { passive: false });
+    view.addEventListener("pointerdown", function (e) {
+      if (e.target.closest(".slip") || e.target.closest(".monitor") || e.target.closest(".zoom-bar") || e.target.closest("button, input, select, textarea, a")) return;
+      var sx = e.clientX;
+      var sy = e.clientY;
+      var ox = ui.view.x;
+      var oy = ui.view.y;
+      view.setPointerCapture(e.pointerId);
+      function move(ev) {
+        ui.view.x = ox + ev.clientX - sx;
+        ui.view.y = oy + ev.clientY - sy;
+        applyView(world, ui);
+      }
+      function up() {
+        view.removeEventListener("pointermove", move);
+        view.removeEventListener("pointerup", up);
+      }
+      view.addEventListener("pointermove", move);
+      view.addEventListener("pointerup", up);
+    });
+    world.querySelectorAll(".slip").forEach(function (node) {
+      var id = node.getAttribute("data-slip");
+      var spec = ui.papers[id];
+      node.addEventListener("pointerdown", function (e) {
+        if (e.target.closest("button")) return;
+        e.stopPropagation();
+        ui.slipZ = (ui.slipZ || 4) + 1;
+        spec.z = ui.slipZ;
+        node.style.zIndex = String(spec.z);
+        var sx = e.clientX;
+        var sy = e.clientY;
+        var ox = spec.x;
+        var oy = spec.y;
+        var dragged = false;
+        node.setPointerCapture(e.pointerId);
+        function move(ev) {
+          var dx = ev.clientX - sx;
+          var dy = ev.clientY - sy;
+          if (dx * dx + dy * dy > 16) dragged = true;
+          spec.x = Math.max(20, Math.min(DESK_W - 220, ox + dx / ui.view.scale));
+          spec.y = Math.max(16, Math.min(DESK_H - 80, oy + dy / ui.view.scale));
+          node.style.left = spec.x + "px";
+          node.style.top = spec.y + "px";
+        }
+        function up(ev) {
+          node.removeEventListener("pointermove", move);
+          node.removeEventListener("pointerup", up);
+          if (dragged) {
+            node.dataset.dragged = "1";
+            ev.preventDefault();
+            ev.stopPropagation();
+          }
+        }
+        node.addEventListener("pointermove", move);
+        node.addEventListener("pointerup", up);
+      });
+      node.addEventListener("click", function (e) {
+        if (node.dataset.dragged === "1") {
+          e.preventDefault();
+          e.stopPropagation();
+          node.dataset.dragged = "";
+        }
+      });
+    });
   }
 
   function tutorialDone(step, data, ui, prog, state) {
