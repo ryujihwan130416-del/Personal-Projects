@@ -992,6 +992,23 @@
       return;
     }
     if (name === "open-case") { openCase(el.getAttribute("data-case")); return; }
+    if (name === "draw-toggle") { ui.drawerOpen = !ui.drawerOpen; paint(); return; }
+    if (name === "draw-out") {
+      SR.desk.pullOut(ui, el.getAttribute("data-doc"));
+      ui.drawerOpen = true;
+      openDoc(el.getAttribute("data-doc"));
+      return;
+    }
+    if (name === "draw-in") {
+      var backId = el.getAttribute("data-doc") || ui.docId;
+      if (ui.out) delete ui.out[backId];
+      if (ui.docId === backId) ui.docId = null;
+      ui.drawerOpen = true;
+      paint();
+      return;
+    }
+    if (name === "note-open") { ui.noteOpen = true; paint(); return; }
+    if (name === "note-close") { ui.noteOpen = false; paint(); return; }
     if (name === "open-doc") { openDoc(el.getAttribute("data-doc")); return; }
     if (name === "pin") {
       var id = el.getAttribute("data-doc") || ui.docId;

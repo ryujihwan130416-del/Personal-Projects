@@ -79,16 +79,20 @@
     var view = h("div", { class: "desk-view" });
     var world = h("div", { class: "desk-world" });
     var plane = h("div", { class: "desk-plane" });
-    plane.appendChild(scenery());
+    plane.appendChild(props());
+    plane.appendChild(notebook(ui));
+    plane.appendChild(laptop());
+    plane.appendChild(drawer(data, list, ui, step));
     var shown = {};
     list.forEach(function (doc) { shown[doc.id] = true; });
     data.docs.forEach(function (doc) {
+      if (!ui.out[doc.id]) return;
       plane.appendChild(slip(doc, data, ui, state, closed, step, !!shown[doc.id]));
     });
     world.appendChild(plane);
     view.appendChild(world);
-    view.appendChild(computer());
-    desk.appendChild(pcPop(data, list, ui, state, prog, closed, step));
+    desk.appendChild(pcPop(data, ui, prog, closed, step));
+    desk.appendChild(notePop(ui, state, data));
     view.appendChild(h("div", { class: "zoom-bar" }, [
       h("button", { type: "button", class: "zoom-btn", "data-zoom": "in", text: "확대" }),
       h("button", { type: "button", class: "zoom-btn", "data-zoom": "out", text: "축소" }),
@@ -107,52 +111,106 @@
     if (ui.paperCase === data.id && ui.papers) return;
     ui.paperCase = data.id;
     ui.papers = {};
+    ui.out = {};
     ui.slipZ = 4;
-    data.docs.forEach(function (doc, i) {
-      var col = i % 4;
-      var row = Math.floor(i / 4);
-      ui.papers[doc.id] = {
-        x: 80 + col * 400 + (i % 2) * 24,
-        y: 36 + row * 200,
+    ui.drawerOpen = false;
+  }
+
+  function pullOut(ui, id) {
+    if (!ui.out) ui.out = {};
+    if (!ui.papers) ui.papers = {};
+    ui.out[id] = true;
+    if (!ui.papers[id]) {
+      ui.slipZ = (ui.slipZ || 4) + 1;
+      ui.papers[id] = {
+        x: 640 + Math.round(Math.random() * 260),
+        y: 360 + Math.round(Math.random() * 160),
         rot: Math.round((Math.random() * 30 - 15) * 10) / 10,
-        z: i + 2
+        z: ui.slipZ
       };
-    });
+    }
   }
 
-  function scenery() {
+  function props() {
     return h("div", { class: "scenery", "aria-hidden": "true" }, [
-      h("div", { class: "lamp" }),
-      h("div", { class: "pencil a" }),
-      h("div", { class: "pencil b" }),
-      h("div", { class: "pencil c" }),
-      h("div", { class: "mug" }),
-      h("div", { class: "stamp-pad" }, [h("span", { text: "착수" })])
-    ]);
-  }
-
-  function computer() {
-    return h("button", { type: "button", class: "monitor", "data-pc": "open", "aria-label": "단말기 열기" }, [
-      h("div", { class: "bezel" }, [
-        h("div", { class: "glass" }, [h("span", { text: "화면" })])
+      h("div", { class: "mug-set" }, [
+        h("div", { class: "saucer" }),
+        h("div", { class: "cup" }, [h("div", { class: "coffee" })])
       ]),
-      h("div", { class: "stand" }),
-      h("div", { class: "keyboard" }),
-      h("div", { class: "mouse" })
+      h("div", { class: "pen" })
     ]);
   }
 
-  function pcPop(data, list, ui, state, prog, closed, step) {
+  function notebook(ui) {
+    return h("button", { type: "button", class: "nb", "data-action": "note-open", "aria-label": "공책 메모" }, [
+      h("span", { class: "nb-band" }),
+      h("span", { class: "nb-label", text: ui.noteOpen ? "메모" : "공책" })
+    ]);
+  }
+
+  function laptop() {
+    var keys = h("div", { class: "lap-keys" });
+    var i;
+    for (i = 0; i < 48; i++) keys.appendChild(h("i"));
+    return h("button", { type: "button", class: "laptop", "data-pc": "open", "aria-label": "노트북 열기" }, [
+      h("div", { class: "lap-lid" }, [h("div", { class: "lap-wall" })]),
+      h("div", { class: "lap-base" }, [
+        h("div", { class: "lap-hinge" }),
+        keys,
+        h("div", { class: "lap-pad" })
+      ])
+    ]);
+  }
+
+  function drawer(data, list, ui, step) {
+    var waiting = step && step.pulse && step.pulse.indexOf("doc:") === 0 && !ui.out[step.pulse.slice(4)];
+    var face = h("button", {
+      type: "button",
+      class: "drawer-face" + (waiting ? " tutor" : ""),
+      "data-action": "draw-toggle",
+      text: "서랍"
+    });
+    var bin = h("div", { class: "drawer-bin" });
+    bin.appendChild(h("p", { class: "drawer-title", text: "꺼낼 서류" }));
+    var any = false;
+    list.forEach(function (doc) {
+      if (ui.out[doc.id]) return;
+      any = true;
+      bin.appendChild(h("button", {
+        type: "button",
+        class: "drawer-doc" + tutorClass(step, "doc:" + doc.id),
+        "data-action": "draw-out",
+        "data-doc": doc.id
+      }, [
+        h("span", { class: "doc-kind", text: SR.dom.kindGroup(doc.kind) }),
+        h("span", { text: doc.title })
+      ]));
+    });
+    if (!any) bin.appendChild(h("p", { class: "empty", text: "서랍이 비었습니다. 책상 위의 서류를 여기로 끌어 넣으십시오." }));
+    return h("aside", { class: "drawer" + (ui.drawerOpen ? " open" : "") }, [face, bin]);
+  }
+
+  function notePop(ui, state, data) {
+    return h("div", { class: "note-pop" + (ui.noteOpen ? "" : " shut") }, [
+      h("div", { class: "note-card" }, [
+        h("div", { class: "pc-top" }, [
+          h("span", { text: "공책" }),
+          h("button", { type: "button", class: "pc-x", "data-action": "note-close", text: "닫기" })
+        ]),
+        h("label", { class: "memo" }, [
+          h("span", { text: "이 철의 메모. 채점하지 않습니다." }),
+          h("textarea", { id: "case-memo", rows: "8", placeholder: "이 브라우저에 남습니다." }, [state.memos[data.id] || ""])
+        ])
+      ])
+    ]);
+  }
+
+  function pcPop(data, ui, prog, closed, step) {
     var screen = h("div", { class: "screen" });
-    screen.appendChild(h("p", { class: "screen-kicker", text: "단말기  ·  특별조사2계" }));
+    screen.appendChild(h("p", { class: "screen-kicker", text: "노트북  ·  특별조사2계" }));
     screen.appendChild(h("p", { class: "screen-brief", text: data.briefing }));
-    screen.appendChild(listCol(data, list, ui, state, step));
     screen.appendChild(sideCol(data, prog, closed));
     screen.appendChild(compareCol(data, ui, closed, step));
-    screen.appendChild(h("label", { class: "memo" }, [
-      h("span", { text: "사건 메모" }),
-      h("textarea", { id: "case-memo", rows: "2", placeholder: "채점하지 않습니다. 이 브라우저에 남습니다." }, [state.memos[data.id] || ""])
-    ]));
     return h("div", { class: "pc-pop" + (ui.pcOpen ? "" : " shut") }, [
       h("div", { class: "pc-frame" }, [
         h("div", { class: "pc-top" }, [
@@ -181,7 +239,8 @@
       var scrapped = state.scraps.some(function (s) { return s.caseId === data.id && s.docId === doc.id; });
       node.appendChild(h("div", { class: "slip-actions" }, [
         h("button", { class: "btn tiny" + tutorClass(step, "pin"), type: "button", "data-action": "pin", "data-doc": doc.id, text: "대조에 올리기" }),
-        h("button", { class: "btn tiny", type: "button", "data-action": "scrap", text: scrapped ? "수첩에 있음" : "수첩에 남기기" })
+        h("button", { class: "btn tiny", type: "button", "data-action": "scrap", text: scrapped ? "수첩에 있음" : "수첩에 남기기" }),
+        h("button", { class: "btn tiny", type: "button", "data-action": "draw-in", "data-doc": doc.id, text: "서랍에 넣기" })
       ]));
       if (closed) node.appendChild(h("p", { class: "closed-note", text: "종결된 철입니다." }));
     }
@@ -301,6 +360,16 @@
           node.removeEventListener("pointermove", move);
           node.removeEventListener("pointerup", up);
           if (dragged) {
+            var face = document.querySelector(".drawer");
+            if (face) {
+              var a = node.getBoundingClientRect();
+              var b = face.getBoundingClientRect();
+              if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) {
+                delete ui.out[id];
+                if (ui.docId === id) ui.docId = null;
+                node.remove();
+              }
+            }
             node.dataset.dragged = "1";
             ev.preventDefault();
             ev.stopPropagation();
@@ -561,5 +630,5 @@
     return bar;
   }
 
-  SR.desk = { paint: paint, filtered: filtered, docById: docById };
+  SR.desk = { paint: paint, filtered: filtered, docById: docById, pullOut: pullOut };
 })(typeof globalThis !== "undefined" ? globalThis : this);

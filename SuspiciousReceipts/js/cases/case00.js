@@ -15,7 +15,7 @@
     bridge: "다음 철부터는 안내 막대가 없습니다. 규칙은 매뉴얼에 있습니다.",
     epilogue: "100번은 101번보다 이를 수 없습니다. 18:40은 나중에 적은 시각입니다. 진짜 철은 다음 폴더입니다.",
     tutorial: [
-      { until: "seen", doc: "slip", pulse: "doc:slip", text: "왼쪽에서 연습 영수증을 여십시오." },
+      { until: "seen", doc: "slip", pulse: "doc:slip", text: "왼쪽 서랍을 열고 연습 영수증을 꺼내십시오." },
       { until: "pin", doc: "slip", pulse: "pin", text: "대조에 올리기를 누르십시오. 서류는 최대 세 장입니다." },
       { until: "seen", doc: "seq", pulse: "doc:seq", text: "단말기 대조표를 여십시오. 번호는 시간순으로만 커집니다." },
       { until: "pin", doc: "seq", pulse: "pin", text: "대조표도 대조 칸에 올리십시오. 커피는 올리지 마십시오." },

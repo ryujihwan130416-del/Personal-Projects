@@ -454,3 +454,95 @@
   .slots { flex-direction: column; }
   .slot { width: 100%; }
 }
+
+.desk-view { background: #d9d3c8; perspective: none; }
+.desk-plane {
+  transform: none;
+  background-color: #e7c79a;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255, 248, 230, 0.35) 0 1px, rgba(176, 122, 62, 0.08) 1px 7px, rgba(120, 78, 36, 0.05) 7px 13px, transparent 13px 18px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.mug-set { position: absolute; left: 90px; top: 70px; width: 150px; height: 150px; }
+.saucer {
+  position: absolute; left: 8px; top: 78px; width: 132px; height: 36px;
+  background: #2c2e33; border-radius: 50%;
+  box-shadow: 0 10px 16px rgba(0, 0, 0, 0.18);
+}
+.cup {
+  position: absolute; left: 36px; top: 18px; width: 78px; height: 70px;
+  background: #2a2c31; border-radius: 8px 8px 18px 18px;
+}
+.cup::before {
+  content: "";
+  position: absolute; right: -16px; top: 18px; width: 18px; height: 26px;
+  border: 4px solid #2a2c31; border-left: 0; border-radius: 0 14px 14px 0;
+}
+.coffee {
+  position: absolute; left: 8px; right: 8px; top: 8px; height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #f3e6d0 0 8px, #d7b48a 9px 16px, #c4a07a 17px);
+}
+.pen {
+  position: absolute; left: 250px; top: 860px; width: 18px; height: 150px;
+  background: linear-gradient(#1c1c1c, #1c1c1c);
+  border-radius: 3px;
+  transform: rotate(8deg);
+  box-shadow: 6px 10px 12px rgba(0, 0, 0, 0.15);
+}
+.pen::before { content: ""; position: absolute; left: 0; top: 0; width: 18px; height: 28px; background: #cfd3d8; border-radius: 3px 3px 0 0; }
+.pen::after { content: ""; position: absolute; left: 5px; bottom: -10px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 12px solid #111; }
+.nb {
+  appearance: none; position: absolute; left: 48px; top: 640px;
+  width: 280px; height: 360px; padding: 0; border: 0; cursor: pointer;
+  background: linear-gradient(180deg, #d5d8df, #b7bcc6);
+  box-shadow: 8px 16px 24px rgba(0, 0, 0, 0.18);
+}
+.nb-band { position: absolute; left: 0; right: 0; top: 46px; height: 18px; background: #9aa0ab; }
+.nb-label { position: absolute; left: 24px; bottom: 28px; color: #4c515a; letter-spacing: 0.14em; font-weight: 800; }
+.laptop {
+  appearance: none; position: absolute; left: 1080px; top: 160px;
+  width: 460px; padding: 0; border: 0; background: transparent; cursor: pointer;
+  filter: drop-shadow(0 18px 16px rgba(0, 0, 0, 0.2));
+}
+.lap-lid {
+  height: 210px; margin: 0 18px;
+  background: #d5d8de;
+  border: 10px solid #eceff3;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+}
+.lap-wall {
+  height: 100%;
+  background:
+    radial-gradient(ellipse at 50% 80%, rgba(255, 255, 255, 0.35), transparent 42%),
+    repeating-radial-gradient(ellipse at 50% 120%, #7ddec8 0 18px, #3ec0c8 19px 36px, #2a8fbf 37px 54px, #1f6f9a 55px 72px);
+}
+.lap-base {
+  background: #f2f4f7;
+  border-radius: 0 0 12px 12px;
+  padding: 16px 22px 18px;
+  box-shadow: inset 0 0 0 8px #e6e9ee;
+}
+.lap-hinge { height: 10px; margin: 0 30px 10px; background: #2a2d32; border-radius: 2px; }
+.lap-keys { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+.lap-keys i { display: block; height: 14px; background: #3a3d44; border-radius: 2px; }
+.lap-pad { width: 150px; height: 78px; margin: 14px auto 0; background: #f7f8fa; border-radius: 6px; box-shadow: inset 0 0 0 1px #d5d8de; }
+.drawer { position: absolute; left: 0; top: 240px; z-index: 15; display: flex; align-items: flex-start; }
+.drawer-face {
+  appearance: none; width: 46px; min-height: 220px; border: 0; cursor: pointer;
+  background: linear-gradient(90deg, #efd7b0, #d7b07a);
+  color: #5c431c; font-weight: 800; letter-spacing: 0.2em;
+  writing-mode: vertical-rl;
+  border-radius: 0 10px 10px 0;
+  box-shadow: 6px 10px 16px rgba(0, 0, 0, 0.16);
+}
+.drawer-bin { display: none; width: 260px; max-height: 420px; overflow: auto; margin-left: 8px; background: #f6efe2; color: #1c1915; padding: 0.6rem; box-shadow: 8px 12px 20px rgba(0, 0, 0, 0.16); }
+.drawer.open .drawer-bin { display: grid; gap: 0.35rem; }
+.drawer-title { margin: 0 0 0.2rem; font-weight: 800; }
+.drawer-doc { text-align: left; background: #fffaf2; color: #1c1915; border: 1px solid #e2d3b8; padding: 0.4rem 0.5rem; display: grid; cursor: pointer; }
+.note-pop { position: absolute; inset: 0; z-index: 31; background: rgba(20, 16, 12, 0.35); display: grid; place-items: center; }
+.note-pop.shut { display: none; }
+.note-card { width: min(520px, 92%); background: #f4f1ea; color: #1c1915; padding: 0 0 1rem; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28); }
+.note-card .memo { margin: 0.8rem 1rem 0; }
+.note-card textarea { min-height: 180px; background: repeating-linear-gradient(#f7f4ec, #f7f4ec 27px, rgba(80, 110, 160, 0.25) 28px); }
