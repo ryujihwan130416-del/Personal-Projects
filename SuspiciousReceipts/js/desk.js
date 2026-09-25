@@ -103,8 +103,10 @@
     bindDesk(view, world, ui);
   }
 
-  var DESK_W = 1760;
-  var DESK_H = 1080;
+  var DESK_W = 2480;
+  var DESK_H = 1680;
+  var PLANE_X = 416;
+  var PLANE_Y = 372;
 
   function ensureLay(ui, data) {
     if (!ui.view) ui.view = { scale: 0.45, x: 20, y: 12, ready: false };
@@ -591,8 +593,8 @@
           var dx = ev.clientX - sx;
           var dy = ev.clientY - sy;
           if (dx * dx + dy * dy > 16) dragged = true;
-          spec.x = Math.max(20, Math.min(DESK_W - 220, ox + dx / ui.view.scale));
-          spec.y = Math.max(16, Math.min(DESK_H - 80, oy + dy / ui.view.scale));
+          spec.x = Math.max(16 - PLANE_X, Math.min(DESK_W - PLANE_X - 140, ox + dx / ui.view.scale));
+          spec.y = Math.max(16 - PLANE_Y, Math.min(DESK_H - PLANE_Y - 90, oy + dy / ui.view.scale));
           node.style.left = spec.x + "px";
           node.style.top = spec.y + "px";
         }
