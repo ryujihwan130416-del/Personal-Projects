@@ -55,6 +55,7 @@ async function runSearch(query) {
   }
   const data = await res.json();
   resultsSection.hidden = false;
+  $("hero").classList.add("is-compact");
   resultLabel.textContent = `"${query}" 결과 ${data.count}건`;
   resultsEl.innerHTML = "";
 
@@ -137,12 +138,22 @@ resetBtn.addEventListener("click", async () => {
     const data = await res.json();
     crawlStatus.textContent = `샘플 문서 ${data.total}개로 초기화했습니다.`;
     resultsSection.hidden = true;
+    $("hero").classList.remove("is-compact");
     await refreshStats();
   } catch {
     crawlStatus.textContent = "초기화에 실패했습니다.";
   } finally {
     resetBtn.disabled = false;
   }
+});
+
+document.querySelector(".brand")?.addEventListener("click", (event) => {
+  event.preventDefault();
+  resultsSection.hidden = true;
+  $("hero").classList.remove("is-compact");
+  qInput.value = "";
+  qInput.focus();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
 refreshStats();
