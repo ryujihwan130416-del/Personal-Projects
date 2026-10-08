@@ -1,0 +1,18 @@
+{
+  "name": "Personal-Projects",
+  "install": "python3 --version && node --version",
+  "terminals": [
+    {
+      "name": "party-archive",
+      "command": "python3 -m http.server 5173 --directory PartyArchive",
+      "description": "Static web server for PartyArchive. Open http://localhost:5173/ to play the 2-player minigame collection. PartyArchive is plain HTML/CSS/vanilla JS with no build step or dependencies."
+    }
+  ],
+  "ports": [
+    {
+      "name": "party-archive",
+      "port": 5173
+    }
+  ],
+  "chromeExecutablePath": "/usr/local/bin/google-chrome"
+}
