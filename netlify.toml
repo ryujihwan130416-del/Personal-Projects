@@ -1,0 +1,10 @@
+# Netlify reads this when the GitHub repo is connected from the repository root.
+# The published site is the same Lumen app as the phone build.
+[build]
+  command = "npm ci --prefix Lumen && npm run build:netlify --prefix Lumen"
+  publish = "netlify"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

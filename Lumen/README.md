@@ -50,6 +50,10 @@ A search costs about 100 quota units, plus a small call when a channel name has 
 
 
 
+## Netlify
+
+저장소의 `netlify` 폴더는 이 앱과 같은 정적 사이트입니다. GitHub 저장소를 Netlify에 연결하면 루트의 `netlify.toml`이 그 폴더를 배포합니다. 폴더만 올릴 때는 Netlify의 수동 배포에 `netlify`를 넣으면 됩니다. 자세한 순서는 `netlify/README.md`에 있습니다.
+
 ## Android APK
 
 `Lumen.apk` opens on a graphing page titled Lumen. Expressions sit on the left, like a calculator. Settings holds the font, text size, dark mode, and a privacy policy at the bottom. **Learn more** in that policy opens the YouTube search.
