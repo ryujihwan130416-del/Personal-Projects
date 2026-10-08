@@ -1,17 +1,31 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { YouTubeError, fetchCategories, searchYouTube } from './api'
 import { searchDemo } from './demo'
 import { CATEGORIES, SUGGESTIONS } from './options'
-import { DEFAULT_FILTERS, activeChips, hasSearchTarget } from './query'
+import { DEFAULT_FILTERS, activeChips, hasSearchTarget, searchRoute } from './query'
 import { hasStoredApiKey, readApiKey, writeApiKey } from './storage'
 import type { CategoryOption, Chip, Filters, SearchPage, VideoResult } from './types'
+
+function mergePages(current: SearchPage | null, next: SearchPage): SearchPage {
+  if (!current) return next
+  const seen = new Set(current.results.map((video) => video.id))
+  return {
+    ...next,
+    results: [...current.results, ...next.results.filter((video) => !seen.has(video.id))],
+    totalResults: Math.max(current.totalResults, next.totalResults),
+    channel: next.channel ?? current.channel,
+  }
+}
 import { FilterPanel, KeyDialog, PlayerDock, Skeletons, VideoCard } from './ui'
 import { formatCount } from './format'
+
+const KEY_REQUIRED = '실제 유튜브 영상을 검색하려면 YouTube Data API 키가 필요합니다.'
 
 type Job = {
   filters: Filters
   pageToken?: string
   id: number
+  append?: boolean
 }
 
 function useClock(): string {
@@ -44,31 +58,54 @@ export function App() {
   const [selected, setSelected] = useState<VideoResult | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [keyOpen, setKeyOpen] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [showLoadMore, setShowLoadMore] = useState(false)
   const streamRef = useRef<HTMLDivElement>(null)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
   const clock = useClock()
-  const live = Boolean(apiKey) && !preferSample
+  const route = searchRoute(apiKey, preferSample)
+  const sampleMode = route === 'sample'
   const chips = activeChips(job?.filters ?? filters, categories)
 
   useEffect(() => {
     if (!job) return
+    if (route === 'needs-key') {
+      setLoadingMore(false)
+      setShowLoadMore(false)
+      if (!job.append) {
+        setPage(null)
+        setSelected(null)
+      }
+      setStatus('error')
+      setSearchError(KEY_REQUIRED)
+      return
+    }
+
     const controller = new AbortController()
     let ignore = false
-    setStatus('loading')
+    if (job.append) setLoadingMore(true)
+    else {
+      setLoadingMore(false)
+      setShowLoadMore(false)
+      setStatus('loading')
+    }
     setSearchError(null)
 
     ;(async () => {
       try {
         const nextPage =
-          live && apiKey
-            ? await searchYouTube(apiKey, job.filters, job.pageToken, controller.signal)
-            : searchDemo(job.filters, job.pageToken, new Date())
+          route === 'sample'
+            ? searchDemo(job.filters, job.pageToken, new Date())
+            : await searchYouTube(apiKey, job.filters, job.pageToken, controller.signal)
         if (ignore) return
-        setPage(nextPage)
+        setPage((current) => (job.append ? mergePages(current, nextPage) : nextPage))
         setStatus('ready')
       } catch (error) {
         if (ignore || (error instanceof DOMException && error.name === 'AbortError')) return
         setStatus('error')
         setSearchError(error instanceof Error ? error.message : 'Search failed.')
+      } finally {
+        if (!ignore) setLoadingMore(false)
       }
     })()
 
@@ -76,11 +113,27 @@ export function App() {
       ignore = true
       controller.abort()
     }
-  }, [job, live, apiKey])
+  }, [job, route, apiKey])
 
   useEffect(() => {
+    if (job?.append) return
     streamRef.current?.scrollTo({ top: 0 })
-  }, [job?.id])
+  }, [job?.id, job?.append])
+
+  useEffect(() => {
+    const root = streamRef.current
+    const node = loadMoreRef.current
+    if (!root || !node || !page?.nextPageToken) {
+      setShowLoadMore(false)
+      return
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowLoadMore(entry.isIntersecting),
+      { root, threshold: 0.4 },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [page?.nextPageToken, page?.results.length])
 
   useEffect(() => {
     if (!apiKey) {
@@ -122,6 +175,16 @@ export function App() {
     const query = job?.filters.q.trim()
     document.title = query ? `${query} — Lumen` : 'Lumen — YouTube search'
   }, [job?.filters.q])
+
+  function loadMore() {
+    if (!applied || !page?.nextPageToken || loadingMore || status === 'loading') return
+    setJob({
+      filters: applied,
+      pageToken: page.nextPageToken,
+      id: (job?.id ?? 0) + 1,
+      append: true,
+    })
+  }
 
   function issue(next: Filters, pageToken?: string, options?: { closeFilters?: boolean; preserveDraft?: boolean }) {
     if (!options?.preserveDraft) {
@@ -171,15 +234,16 @@ export function App() {
 
   function retarget(sample: boolean) {
     if (sample) {
-      if (!apiKey || preferSample) return
+      if (preferSample) return
       setPreferSample(true)
+    } else if (preferSample) {
+      setPreferSample(false)
+      if (!apiKey) setKeyOpen(true)
     } else if (!apiKey) {
       setKeyOpen(true)
       return
-    } else if (!preferSample) {
-      return
     } else {
-      setPreferSample(false)
+      return
     }
     setJob((current) =>
       current ? { filters: current.filters, pageToken: undefined, id: current.id + 1 } : current,
@@ -196,8 +260,9 @@ export function App() {
   }
 
   const applied = job?.filters
+  const resultNoun = page?.channel ? 'upload' : 'video'
   const resultLabel = page
-    ? `${live ? '' : 'Sample · '}${formatCount(page.totalResults)} video${page.totalResults === 1 ? '' : 's'}`
+    ? `${sampleMode ? '샘플 · ' : ''}${formatCount(page.totalResults)} ${resultNoun}${page.totalResults === 1 ? '' : 's'}`
     : ''
 
   return (
@@ -225,10 +290,10 @@ export function App() {
           </button>
           <p className="clock">{clock}</p>
           <div className="mode" role="group" aria-label="Data source">
-            <button type="button" data-mode="sample" aria-pressed={!live} onClick={() => retarget(true)}>
+            <button type="button" data-mode="sample" aria-pressed={sampleMode} onClick={() => retarget(true)}>
               Sample
             </button>
-            <button type="button" data-mode="live" aria-pressed={live} onClick={() => retarget(false)}>
+            <button type="button" data-mode="live" aria-pressed={!sampleMode} onClick={() => retarget(false)}>
               Live
             </button>
           </div>
@@ -266,12 +331,16 @@ export function App() {
                 <div className="lens" aria-hidden="true" />
                 <p className="kicker">YouTube Data API</p>
                 <h2>
-                  Search YouTube
+                  추천 영상을 받으려면
                   <br />
-                  with every filter in reach.
+                  먼저 검색하세요.
                 </h2>
                 <p className="lede">
-                  Length, upload date, picture quality, captions, license, category, language, and live broadcasts.
+                  {sampleMode
+                    ? '샘플 목록에서만 찾습니다. 유튜브에 있는 영상을 보려면 Live를 고르고 YouTube Data API 키를 넣으세요.'
+                    : !apiKey
+                      ? `${KEY_REQUIRED} 키를 넣은 뒤 검색하면, 검색어가 들어간 영상부터 보여주고 Load More로 다음 페이지만 불러옵니다.`
+                      : '검색어가 들어간 영상부터 보여 줍니다. 맨 아래까지 내리면 Load More로 다음 페이지만 이어서 불러옵니다.'}
                 </p>
               </section>
             ) : null}
@@ -280,7 +349,7 @@ export function App() {
               role="search"
               onSubmit={(event) => {
                 event.preventDefault()
-                const next = { ...filters, channelId: channelDraft }
+                const next = { ...filters, channelId: channelDraft, keywordOnly: false }
                 if (!hasSearchTarget(next)) {
                   setFilters(next)
                   setChannelDraft(next.channelId)
@@ -300,7 +369,7 @@ export function App() {
                 <input
                   id="q"
                   value={filters.q}
-                  placeholder="Videos, topics, channels"
+                  placeholder="A topic, or a channel name"
                   onChange={(event) => {
                     setFilters({ ...filters, q: event.target.value })
                     setNotice(null)
@@ -327,7 +396,11 @@ export function App() {
                 <button
                   key={term}
                   type="button"
-                  onClick={() => issue({ ...filters, q: term, channelId: channelDraft }, undefined, { closeFilters: true })}
+                  onClick={() =>
+                    issue({ ...filters, q: term, channelId: channelDraft, keywordOnly: false }, undefined, {
+                      closeFilters: true,
+                    })
+                  }
                 >
                   {term}
                 </button>
@@ -340,18 +413,24 @@ export function App() {
               </p>
             ) : null}
 
-            {!live ? (
+            {sampleMode ? (
               <div className="banner">
                 <p>
-                  Sample catalog of public videos. Durations and stats are approximate. Add a YouTube Data API key to
-                  search the live index.
+                  샘플 목록만 검색합니다. 유튜브에 있는 영상을 찾으려면 Live를 고르고 YouTube Data API 키를 넣으세요.
                 </p>
+                <button type="button" className="text-btn" onClick={() => retarget(false)}>
+                  Live
+                </button>
+              </div>
+            ) : !apiKey ? (
+              <div className="banner">
+                <p>{KEY_REQUIRED}</p>
                 <button type="button" className="text-btn" onClick={() => setKeyOpen(true)}>
                   Add key
                 </button>
               </div>
             ) : (
-              <p className="hint quota">Each live search uses about 100 YouTube quota units.</p>
+              <p className="hint quota">Each search or Load More uses about 100 YouTube quota units. Only the next page is requested.</p>
             )}
 
             {searchError ? (
@@ -361,7 +440,7 @@ export function App() {
                   <button type="button" className="ghost-btn" onClick={() => setKeyOpen(true)}>
                     Check key
                   </button>
-                  {live ? (
+                  {!sampleMode ? (
                     <button type="button" className="ghost-btn" onClick={() => retarget(true)}>
                       Use sample catalog
                     </button>
@@ -372,26 +451,25 @@ export function App() {
 
             {applied && page ? (
               <Results
-                title={applied.q.trim() ? `“${applied.q.trim()}”` : 'Filtered videos'}
+                title={page.channel?.title ?? (applied.q.trim() ? `“${applied.q.trim()}”` : 'Filtered videos')}
                 label={resultLabel}
                 chips={chips}
                 page={page}
                 loading={status === 'loading'}
-                sample={!live}
+                sample={sampleMode}
                 categories={categories}
                 selectedId={selected?.id ?? null}
                 onChip={(chip: Chip) => applyPatch(applied, chip.patch, true)}
                 onSelect={(video) => setSelected((current) => (current?.id === video.id ? null : video))}
-                onPrev={
-                  page.prevPageToken
-                    ? () => issue(applied, page.prevPageToken, { preserveDraft: true })
+                onKeyword={
+                  applied.q.trim() && page.channel && !applied.keywordOnly
+                    ? () => issue({ ...applied, keywordOnly: true, channelId: '' })
                     : undefined
                 }
-                onNext={
-                  page.nextPageToken
-                    ? () => issue(applied, page.nextPageToken, { preserveDraft: true })
-                    : undefined
-                }
+                loadMoreRef={loadMoreRef}
+                showLoadMore={showLoadMore && Boolean(page.nextPageToken)}
+                loadingMore={loadingMore}
+                onLoadMore={loadMore}
               />
             ) : null}
 
@@ -401,7 +479,7 @@ export function App() {
           {selected ? (
             <>
               <button type="button" className="dock-backdrop" aria-label="Close player" onClick={() => setSelected(null)} />
-              <PlayerDock video={selected} approximate={!live} onClose={() => setSelected(null)} />
+              <PlayerDock video={selected} approximate={sampleMode} onClose={() => setSelected(null)} />
             </>
           ) : null}
         </div>
@@ -429,8 +507,11 @@ function Results({
   selectedId,
   onChip,
   onSelect,
-  onPrev,
-  onNext,
+  onKeyword,
+  loadMoreRef,
+  showLoadMore,
+  loadingMore,
+  onLoadMore,
 }: {
   title: string
   label: string
@@ -442,8 +523,11 @@ function Results({
   selectedId: string | null
   onChip: (chip: Chip) => void
   onSelect: (video: VideoResult) => void
-  onPrev?: () => void
-  onNext?: () => void
+  onKeyword?: () => void
+  loadMoreRef: RefObject<HTMLDivElement | null>
+  showLoadMore: boolean
+  loadingMore: boolean
+  onLoadMore: () => void
 }) {
   return (
     <section className="results" aria-busy={loading}>
@@ -453,8 +537,19 @@ function Results({
           <p className="meta" role="status">
             {loading ? 'Searching…' : label}
           </p>
+          {page.channel ? (
+            <p className="channel-note">
+              {sample
+                ? '샘플 목록에 있는 이 채널의 영상입니다.'
+                : 'All public uploads from this channel, newest first.'}
+              {onKeyword ? (
+                <button type="button" className="text-btn" onClick={onKeyword}>
+                  Search as a keyword
+                </button>
+              ) : null}
+            </p>
+          ) : null}
         </div>
-        <Pager onPrev={onPrev} onNext={onNext} />
       </div>
       {chips.length > 0 ? (
         <div className="chips" aria-label="Active filters">
@@ -473,7 +568,7 @@ function Results({
           <h3>No videos in this slice</h3>
           <p>
             {sample
-              ? 'Widen a filter, or search the live index with an API key.'
+              ? '이 조건에 맞는 샘플 영상이 없습니다. 필터를 넓히거나 Live에서 실제 유튜브를 검색하세요.'
               : 'Widen a filter or try another query.'}
           </p>
         </div>
@@ -490,25 +585,18 @@ function Results({
           ))}
         </div>
       )}
-      {page.results.length > 0 ? (
-        <div className="pager-foot">
-          <Pager onPrev={onPrev} onNext={onNext} />
+      {page.nextPageToken ? (
+        <div className="load-more" ref={loadMoreRef}>
+          {showLoadMore ? (
+            <>
+              <button type="button" className="primary" onClick={onLoadMore} disabled={loadingMore || loading}>
+                {loadingMore ? 'Loading…' : 'Load More'}
+              </button>
+              <p className="hint">한 페이지씩만 불러옵니다.</p>
+            </>
+          ) : null}
         </div>
       ) : null}
     </section>
-  )
-}
-
-function Pager({ onPrev, onNext }: { onPrev?: () => void; onNext?: () => void }) {
-  if (!onPrev && !onNext) return null
-  return (
-    <div className="pager">
-      <button type="button" className="ghost-btn" disabled={!onPrev} onClick={onPrev}>
-        Previous
-      </button>
-      <button type="button" className="ghost-btn" disabled={!onNext} onClick={onNext}>
-        Next
-      </button>
-    </div>
   )
 }

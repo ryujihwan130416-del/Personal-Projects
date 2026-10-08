@@ -434,6 +434,15 @@ a.primary { display: inline-flex; align-items: center; text-decoration: none; }
   gap: 12px;
 }
 .result-head { margin: 8px 0 12px; }
+.channel-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
 .result-title {
   margin: 0;
   font-family: Syne, sans-serif;
@@ -443,7 +452,15 @@ a.primary { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .meta { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 .meta.dim { color: var(--dim); }
-.pager-foot { display: flex; justify-content: flex-end; margin-top: 16px; }
+.load-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 96px;
+  margin-top: 22px;
+}
+.load-more .primary { min-width: 160px; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .chip {
