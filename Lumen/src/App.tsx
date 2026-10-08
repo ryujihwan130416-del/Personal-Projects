@@ -196,8 +196,9 @@ export function App() {
   }
 
   const applied = job?.filters
+  const resultNoun = page?.channel ? 'upload' : 'video'
   const resultLabel = page
-    ? `${live ? '' : 'Sample · '}${formatCount(page.totalResults)} video${page.totalResults === 1 ? '' : 's'}`
+    ? `${live ? '' : 'Sample · '}${formatCount(page.totalResults)} ${resultNoun}${page.totalResults === 1 ? '' : 's'}`
     : ''
 
   return (
@@ -271,7 +272,7 @@ export function App() {
                   with every filter in reach.
                 </h2>
                 <p className="lede">
-                  Length, upload date, picture quality, captions, license, category, language, and live broadcasts.
+                  Search a channel name to list that creator’s videos, or search a topic and narrow it with the filters.
                 </p>
               </section>
             ) : null}
@@ -280,7 +281,7 @@ export function App() {
               role="search"
               onSubmit={(event) => {
                 event.preventDefault()
-                const next = { ...filters, channelId: channelDraft }
+                const next = { ...filters, channelId: channelDraft, keywordOnly: false }
                 if (!hasSearchTarget(next)) {
                   setFilters(next)
                   setChannelDraft(next.channelId)
@@ -300,7 +301,7 @@ export function App() {
                 <input
                   id="q"
                   value={filters.q}
-                  placeholder="Videos, topics, channels"
+                  placeholder="A topic, or a channel name"
                   onChange={(event) => {
                     setFilters({ ...filters, q: event.target.value })
                     setNotice(null)
@@ -327,7 +328,11 @@ export function App() {
                 <button
                   key={term}
                   type="button"
-                  onClick={() => issue({ ...filters, q: term, channelId: channelDraft }, undefined, { closeFilters: true })}
+                  onClick={() =>
+                    issue({ ...filters, q: term, channelId: channelDraft, keywordOnly: false }, undefined, {
+                      closeFilters: true,
+                    })
+                  }
                 >
                   {term}
                 </button>
@@ -372,7 +377,7 @@ export function App() {
 
             {applied && page ? (
               <Results
-                title={applied.q.trim() ? `“${applied.q.trim()}”` : 'Filtered videos'}
+                title={page.channel?.title ?? (applied.q.trim() ? `“${applied.q.trim()}”` : 'Filtered videos')}
                 label={resultLabel}
                 chips={chips}
                 page={page}
@@ -382,6 +387,11 @@ export function App() {
                 selectedId={selected?.id ?? null}
                 onChip={(chip: Chip) => applyPatch(applied, chip.patch, true)}
                 onSelect={(video) => setSelected((current) => (current?.id === video.id ? null : video))}
+                onKeyword={
+                  applied.q.trim() && page.channel && !applied.keywordOnly
+                    ? () => issue({ ...applied, keywordOnly: true })
+                    : undefined
+                }
                 onPrev={
                   page.prevPageToken
                     ? () => issue(applied, page.prevPageToken, { preserveDraft: true })
@@ -429,6 +439,7 @@ function Results({
   selectedId,
   onChip,
   onSelect,
+  onKeyword,
   onPrev,
   onNext,
 }: {
@@ -442,6 +453,7 @@ function Results({
   selectedId: string | null
   onChip: (chip: Chip) => void
   onSelect: (video: VideoResult) => void
+  onKeyword?: () => void
   onPrev?: () => void
   onNext?: () => void
 }) {
@@ -453,6 +465,18 @@ function Results({
           <p className="meta" role="status">
             {loading ? 'Searching…' : label}
           </p>
+          {page.channel ? (
+            <p className="channel-note">
+              {sample
+                ? 'Every video from this channel in the sample catalog.'
+                : 'All public uploads from this channel, newest first.'}
+              {onKeyword ? (
+                <button type="button" className="text-btn" onClick={onKeyword}>
+                  Search as a keyword
+                </button>
+              ) : null}
+            </p>
+          ) : null}
         </div>
         <Pager onPrev={onPrev} onNext={onNext} />
       </div>

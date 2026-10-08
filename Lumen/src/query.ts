@@ -30,6 +30,7 @@ export const DEFAULT_FILTERS: Filters = {
   relevanceLanguage: '',
   videoEmbeddable: false,
   channelId: '',
+  keywordOnly: false,
   maxResults: 12,
 }
 
