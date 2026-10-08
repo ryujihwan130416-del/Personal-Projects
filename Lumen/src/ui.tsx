@@ -442,7 +442,9 @@ export function PlayerDock({
         {video.likeCount != null ? ` · ${formatCount(video.likeCount)} likes` : ''}
         {video.publishedAt ? ` · ${formatRelative(video.publishedAt)}` : ''}
       </p>
-      {approximate ? <p className="hint">Sample stats are approximate. Live search replaces them.</p> : null}
+      {approximate ? (
+        <p className="hint">샘플 통계는 대략적인 값입니다. Live에서는 실제 유튜브 정보를 보여 줍니다.</p>
+      ) : null}
       {video.description ? (
         <>
           <p className={expanded || !longDescription ? 'desc' : 'desc clamped'}>{video.description}</p>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { YouTubeError, fetchCategories, searchYouTube } from './api'
 import { searchDemo } from './demo'
 import { CATEGORIES, SUGGESTIONS } from './options'
-import { DEFAULT_FILTERS, activeChips, hasSearchTarget } from './query'
+import { DEFAULT_FILTERS, activeChips, hasSearchTarget, searchRoute } from './query'
 import { hasStoredApiKey, readApiKey, writeApiKey } from './storage'
 import type { CategoryOption, Chip, Filters, SearchPage, VideoResult } from './types'
 
@@ -18,6 +18,8 @@ function mergePages(current: SearchPage | null, next: SearchPage): SearchPage {
 }
 import { FilterPanel, KeyDialog, PlayerDock, Skeletons, VideoCard } from './ui'
 import { formatCount } from './format'
+
+const KEY_REQUIRED = '실제 유튜브 영상을 검색하려면 YouTube Data API 키가 필요합니다.'
 
 type Job = {
   filters: Filters
@@ -61,11 +63,24 @@ export function App() {
   const streamRef = useRef<HTMLDivElement>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const clock = useClock()
-  const live = Boolean(apiKey) && !preferSample
+  const route = searchRoute(apiKey, preferSample)
+  const sampleMode = route === 'sample'
   const chips = activeChips(job?.filters ?? filters, categories)
 
   useEffect(() => {
     if (!job) return
+    if (route === 'needs-key') {
+      setLoadingMore(false)
+      setShowLoadMore(false)
+      if (!job.append) {
+        setPage(null)
+        setSelected(null)
+      }
+      setStatus('error')
+      setSearchError(KEY_REQUIRED)
+      return
+    }
+
     const controller = new AbortController()
     let ignore = false
     if (job.append) setLoadingMore(true)
@@ -79,9 +94,9 @@ export function App() {
     ;(async () => {
       try {
         const nextPage =
-          live && apiKey
-            ? await searchYouTube(apiKey, job.filters, job.pageToken, controller.signal)
-            : searchDemo(job.filters, job.pageToken, new Date())
+          route === 'sample'
+            ? searchDemo(job.filters, job.pageToken, new Date())
+            : await searchYouTube(apiKey, job.filters, job.pageToken, controller.signal)
         if (ignore) return
         setPage((current) => (job.append ? mergePages(current, nextPage) : nextPage))
         setStatus('ready')
@@ -98,7 +113,7 @@ export function App() {
       ignore = true
       controller.abort()
     }
-  }, [job, live, apiKey])
+  }, [job, route, apiKey])
 
   useEffect(() => {
     if (job?.append) return
@@ -219,15 +234,16 @@ export function App() {
 
   function retarget(sample: boolean) {
     if (sample) {
-      if (!apiKey || preferSample) return
+      if (preferSample) return
       setPreferSample(true)
+    } else if (preferSample) {
+      setPreferSample(false)
+      if (!apiKey) setKeyOpen(true)
     } else if (!apiKey) {
       setKeyOpen(true)
       return
-    } else if (!preferSample) {
-      return
     } else {
-      setPreferSample(false)
+      return
     }
     setJob((current) =>
       current ? { filters: current.filters, pageToken: undefined, id: current.id + 1 } : current,
@@ -246,7 +262,7 @@ export function App() {
   const applied = job?.filters
   const resultNoun = page?.channel ? 'upload' : 'video'
   const resultLabel = page
-    ? `${live ? '' : 'Sample · '}${formatCount(page.totalResults)} ${resultNoun}${page.totalResults === 1 ? '' : 's'}`
+    ? `${sampleMode ? '샘플 · ' : ''}${formatCount(page.totalResults)} ${resultNoun}${page.totalResults === 1 ? '' : 's'}`
     : ''
 
   return (
@@ -274,10 +290,10 @@ export function App() {
           </button>
           <p className="clock">{clock}</p>
           <div className="mode" role="group" aria-label="Data source">
-            <button type="button" data-mode="sample" aria-pressed={!live} onClick={() => retarget(true)}>
+            <button type="button" data-mode="sample" aria-pressed={sampleMode} onClick={() => retarget(true)}>
               Sample
             </button>
-            <button type="button" data-mode="live" aria-pressed={live} onClick={() => retarget(false)}>
+            <button type="button" data-mode="live" aria-pressed={!sampleMode} onClick={() => retarget(false)}>
               Live
             </button>
           </div>
@@ -320,7 +336,11 @@ export function App() {
                   먼저 검색하세요.
                 </h2>
                 <p className="lede">
-                  검색어가 들어간 영상부터 보여 줍니다. 맨 아래까지 내리면 Load More로 다음 페이지만 이어서 불러옵니다.
+                  {sampleMode
+                    ? '샘플 목록에서만 찾습니다. 유튜브에 있는 영상을 보려면 Live를 고르고 YouTube Data API 키를 넣으세요.'
+                    : !apiKey
+                      ? `${KEY_REQUIRED} 키를 넣은 뒤 검색하면, 검색어가 들어간 영상부터 보여주고 Load More로 다음 페이지만 불러옵니다.`
+                      : '검색어가 들어간 영상부터 보여 줍니다. 맨 아래까지 내리면 Load More로 다음 페이지만 이어서 불러옵니다.'}
                 </p>
               </section>
             ) : null}
@@ -393,12 +413,18 @@ export function App() {
               </p>
             ) : null}
 
-            {!live ? (
+            {sampleMode ? (
               <div className="banner">
                 <p>
-                  Sample catalog of public videos. Durations and stats are approximate. Add a YouTube Data API key to
-                  search the live index.
+                  샘플 목록만 검색합니다. 유튜브에 있는 영상을 찾으려면 Live를 고르고 YouTube Data API 키를 넣으세요.
                 </p>
+                <button type="button" className="text-btn" onClick={() => retarget(false)}>
+                  Live
+                </button>
+              </div>
+            ) : !apiKey ? (
+              <div className="banner">
+                <p>{KEY_REQUIRED}</p>
                 <button type="button" className="text-btn" onClick={() => setKeyOpen(true)}>
                   Add key
                 </button>
@@ -414,7 +440,7 @@ export function App() {
                   <button type="button" className="ghost-btn" onClick={() => setKeyOpen(true)}>
                     Check key
                   </button>
-                  {live ? (
+                  {!sampleMode ? (
                     <button type="button" className="ghost-btn" onClick={() => retarget(true)}>
                       Use sample catalog
                     </button>
@@ -430,7 +456,7 @@ export function App() {
                 chips={chips}
                 page={page}
                 loading={status === 'loading'}
-                sample={!live}
+                sample={sampleMode}
                 categories={categories}
                 selectedId={selected?.id ?? null}
                 onChip={(chip: Chip) => applyPatch(applied, chip.patch, true)}
@@ -453,7 +479,7 @@ export function App() {
           {selected ? (
             <>
               <button type="button" className="dock-backdrop" aria-label="Close player" onClick={() => setSelected(null)} />
-              <PlayerDock video={selected} approximate={!live} onClose={() => setSelected(null)} />
+              <PlayerDock video={selected} approximate={sampleMode} onClose={() => setSelected(null)} />
             </>
           ) : null}
         </div>
@@ -514,7 +540,7 @@ function Results({
           {page.channel ? (
             <p className="channel-note">
               {sample
-                ? 'Every video from this channel in the sample catalog.'
+                ? '샘플 목록에 있는 이 채널의 영상입니다.'
                 : 'All public uploads from this channel, newest first.'}
               {onKeyword ? (
                 <button type="button" className="text-btn" onClick={onKeyword}>
@@ -542,7 +568,7 @@ function Results({
           <h3>No videos in this slice</h3>
           <p>
             {sample
-              ? 'Widen a filter, or search the live index with an API key.'
+              ? '이 조건에 맞는 샘플 영상이 없습니다. 필터를 넓히거나 Live에서 실제 유튜브를 검색하세요.'
               : 'Widen a filter or try another query.'}
           </p>
         </div>

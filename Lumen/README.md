@@ -2,7 +2,9 @@
 
 Search YouTube by the details that usually take a pile of menus: length, upload date, quality, captions, license, category, language, region, channel, and live broadcasts. Pick a result and it plays in the page.
 
-Without an API key, Lumen searches a built-in sample catalog so the filters and player are usable immediately. Durations and statistics in that catalog are approximate. Add a YouTube Data API v3 key to search the live index.
+A normal search looks up public videos on YouTube through the official YouTube Data API. It does not search the built-in sample list.
+
+Without an API key, Lumen cannot call YouTube. The empty screen and a search both say that a YouTube Data API v3 key is required. Paste one into **Add API key** (stored in this browser only) or set `VITE_YOUTUBE_API_KEY`. **Sample** is a separate toggle for the built-in catalog. Durations and statistics there are approximate.
 
 ## Run
 
@@ -37,7 +39,8 @@ A search costs about 100 quota units, plus a small call when a channel name has 
 
 ## Search
 
-- The first screen waits for a search. Results that contain the words come first, and the rest of the matches follow.
+- Live is the default. A search calls YouTube Data API `search.list` (or a channel’s uploads playlist) and does not return the sample catalog.
+- The first screen waits for a search. Results whose titles contain the words come first, and the rest of the real matches follow.
 - **Load More** appears at the bottom and requests only the next page.
 - A channel name in the channel filter lists that creator’s uploads. **Search as a keyword** goes back to a normal search.
 - Set filters before or after the first search. After a search, changing a filter runs again.
