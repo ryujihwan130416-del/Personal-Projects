@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>서랍 — 로컬 검색</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <header class="top">
+    <a class="brand" href="/" aria-label="서랍 홈">서랍</a>
+    <p class="top-note">이 컴퓨터에서만 · 퍼블리시 없음</p>
+  </header>
+
+  <main>
+    <section class="hero" id="hero">
+      <p class="brand-mark">서랍</p>
+      <h1 class="headline">나만의 웹을<br />꺼내 보세요</h1>
+      <p class="lede">지정한 페이지만 모아 두고, 로컬에서 바로 검색합니다.</p>
+
+      <form class="search-form" id="search-form" role="search">
+        <label class="sr-only" for="q">검색어</label>
+        <input
+          id="q"
+          name="q"
+          type="search"
+          autocomplete="off"
+          placeholder="예: 녹차, BM25, 남산공원"
+          required
+        />
+        <button type="submit">검색</button>
+      </form>
+
+      <p class="meta" id="stats">색인 준비 중…</p>
+    </section>
+
+    <section class="results-section" id="results-section" hidden>
+      <h2 class="section-title"><span id="result-label">결과</span></h2>
+      <ol class="results" id="results"></ol>
+      <p class="empty" id="empty" hidden>맞는 문서가 없습니다. 다른 단어로 시도해 보세요.</p>
+    </section>
+
+    <section class="crawl-section" id="crawl-section">
+      <h2 class="section-title">페이지 모으기</h2>
+      <p class="section-copy">시작 URL을 넣으면 같은 사이트 안 링크를 따라가며 색인에 더합니다.</p>
+      <form class="crawl-form" id="crawl-form">
+        <label class="sr-only" for="seeds">시작 URL</label>
+        <textarea
+          id="seeds"
+          name="seeds"
+          rows="3"
+          placeholder="https://example.com&#10;한 줄에 URL 하나"
+          required
+        ></textarea>
+        <div class="crawl-controls">
+          <label>
+            최대 페이지
+            <input id="max-pages" type="number" min="1" max="200" value="20" />
+          </label>
+          <label>
+            깊이
+            <input id="max-depth" type="number" min="0" max="5" value="1" />
+          </label>
+          <button type="submit" id="crawl-btn">크롤 시작</button>
+        </div>
+      </form>
+      <p class="crawl-status" id="crawl-status" aria-live="polite"></p>
+      <button type="button" class="reset-btn" id="reset-btn">샘플 문서로 초기화</button>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>서랍은 로컬 전용 미니 검색 엔진입니다. robots.txt와 요청 간격을 지킵니다.</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
