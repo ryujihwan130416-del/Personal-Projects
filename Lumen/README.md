@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints (http://localhost:5173).
+Open the URL Vite prints ([http://localhost:5173](http://localhost:5173)).
 
 `npm test` checks the query builder and the sample search. `npm run build` typechecks and writes `dist/`.
 
@@ -48,9 +48,11 @@ A search costs about 100 quota units, plus a small call when a channel name has 
 - Region and language bias the ranking. They do not drop videos from other places.
 - `/` focuses the search box. `Esc` closes the player and the mobile filter drawer.
 
+
+
 ## Android APK
 
-`Lumen.apk` is a debug build of the same app, wrapped in an Android WebView. It needs Android 6 or newer.
+`Lumen.apk` is a debug build of the same app, wrapped in an Android WebView. It needs Android 6 or newer. The app opens on a graph page. **Learn more** at the bottom opens the YouTube search.
 
 1. Copy `Lumen.apk` to the phone.
 2. Open it and allow installation from this source if Android asks.
@@ -69,3 +71,9 @@ The new file is `android/app/build/outputs/apk/debug/app-debug.apk`. Copy it ove
 ## Keyboard and layout
 
 The filter column stays on screen on a wide window and becomes a drawer on a narrow one. Choosing a video opens a player beside the results, or as a sheet on a smaller window.
+
+
+
+
+
+I made this to watch YT without my mom realizing btw

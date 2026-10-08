@@ -462,6 +462,106 @@ a.primary { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .load-more .primary { min-width: 160px; }
 
+.graph-app {
+  position: relative;
+  z-index: 2;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: #f4f0e6;
+  color: #1d2430;
+}
+.graph-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px 8px;
+  flex-wrap: wrap;
+}
+.graph-kicker {
+  margin: 0;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+.graph-bar h1 {
+  margin: 0;
+  font-family: Syne, Outfit, sans-serif;
+  font-size: 32px;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.graph-form, .graph-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.graph-form label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  color: #5c6570;
+}
+.graph-form input {
+  width: min(280px, 46vw);
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(29, 36, 48, 0.18);
+  background: #fffdf8;
+  color: #1d2430;
+  padding: 0 12px;
+}
+.graph-plot, .graph-tools button, .graph-foot button {
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(29, 36, 48, 0.16);
+  background: #fffdf8;
+  color: #1d2430;
+  padding: 0 14px;
+}
+.graph-plot, .graph-foot button {
+  background: #0f766e;
+  color: #f4f0e6;
+  border-color: #0f766e;
+  font-weight: 600;
+}
+.graph-tools button[aria-pressed="true"] {
+  background: #1d2430;
+  color: #f4f0e6;
+}
+.graph-error {
+  margin: 0 18px;
+  color: #9f1239;
+  font-size: 14px;
+}
+.graph-canvas {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.graph-canvas.is-draw { cursor: crosshair; }
+.graph-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(29, 36, 48, 0.12);
+  background: #ebe6dc;
+}
+.graph-foot p {
+  margin: 0;
+  max-width: 62ch;
+  color: #3d4654;
+}
+.graph-return { color: var(--cyan); }
+@media (max-width: 720px) {
+  .graph-bar h1 { font-size: 26px; }
+  .graph-foot { align-items: flex-start; flex-direction: column; }
+}
+
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .chip {
   display: inline-flex;
