@@ -175,7 +175,7 @@ export function App() {
 
   useEffect(() => {
     const query = job?.filters.q.trim()
-    document.title = query ? `${query} — Lumen` : 'Lumen — YouTube search'
+    document.title = query ? `${query} — Lumen` : 'Lumen'
   }, [job?.filters.q])
 
   function loadMore() {
@@ -281,7 +281,6 @@ export function App() {
           <span className="mark" aria-hidden="true" />
           <div>
             <h1>Lumen</h1>
-            <p>YouTube search</p>
           </div>
         </div>
         <div className="header-actions">
