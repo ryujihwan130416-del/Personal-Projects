@@ -1,6 +1,8 @@
+import { namesMatch } from './channel'
+import { filterCatalog, sortResults } from './demo'
 import { decodeEntities, parseIsoDuration, safeThumbnail, safeYouTubeUrl } from './format'
 import { buildSearchParams, isChannelId } from './query'
-import type { Broadcast, Filters, Picture, SearchPage, VideoResult } from './types'
+import type { Broadcast, ChannelHit, Filters, Picture, SearchPage, VideoResult } from './types'
 
 export class YouTubeError extends Error {
   status: number
@@ -11,8 +13,6 @@ export class YouTubeError extends Error {
     this.status = status
   }
 }
-
-const channelCache = new Map<string, string>()
 
 export function explainError(message: string): string {
   const lower = message.toLowerCase()
@@ -75,45 +75,6 @@ async function getJson(url: URL, signal?: AbortSignal): Promise<unknown> {
   return payload
 }
 
-export async function resolveChannelId(apiKey: string, input: string, signal?: AbortSignal): Promise<string | null> {
-  const trimmed = input.trim()
-  if (!trimmed) return null
-  if (isChannelId(trimmed)) return trimmed
-
-  const handle = trimmed.replace(/^@/, '')
-  const cacheKey = handle.toLowerCase()
-  const cached = channelCache.get(cacheKey)
-  if (cached) return cached
-
-  const byHandle = new URL('https://www.googleapis.com/youtube/v3/channels')
-  byHandle.searchParams.set('part', 'id')
-  byHandle.searchParams.set('forHandle', handle)
-  byHandle.searchParams.set('key', apiKey)
-  try {
-    const payload = await getJson(byHandle, signal)
-    const id = text(asRecord(asArray(asRecord(payload)?.items)[0])?.id)
-    if (id) {
-      channelCache.set(cacheKey, id)
-      return id
-    }
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error
-    if (error instanceof YouTubeError && error.status !== 400 && error.status !== 404) throw error
-  }
-
-  const byName = new URL('https://www.googleapis.com/youtube/v3/search')
-  byName.searchParams.set('part', 'snippet')
-  byName.searchParams.set('type', 'channel')
-  byName.searchParams.set('maxResults', '1')
-  byName.searchParams.set('q', handle)
-  byName.searchParams.set('key', apiKey)
-  const payload = await getJson(byName, signal)
-  const id = text(asRecord(asRecord(asArray(asRecord(payload)?.items)[0])?.id)?.channelId)
-  if (!id) return null
-  channelCache.set(cacheKey, id)
-  return id
-}
-
 function thumbnailOf(snippet: Record<string, unknown> | null, videoId: string): string {
   const thumbs = asRecord(snippet?.thumbnails)
   const best = asRecord(thumbs?.high) ?? asRecord(thumbs?.medium) ?? asRecord(thumbs?.default)
@@ -170,6 +131,168 @@ function mapVideo(item: unknown, detail: unknown): VideoResult | null {
   }
 }
 
+type ResolvedChannel = ChannelHit & { id: string; uploadsId: string }
+
+const browseCache = new Map<string, ResolvedChannel | null>()
+
+function cacheKey(query: string): string {
+  return query.trim().toLowerCase()
+}
+
+async function fetchChannel(
+  apiKey: string,
+  which: { id?: string; forHandle?: string },
+  signal?: AbortSignal,
+): Promise<ResolvedChannel | null> {
+  const url = new URL('https://www.googleapis.com/youtube/v3/channels')
+  url.searchParams.set('part', 'snippet,contentDetails')
+  if (which.id) url.searchParams.set('id', which.id)
+  if (which.forHandle) url.searchParams.set('forHandle', which.forHandle)
+  url.searchParams.set('key', apiKey)
+  const payload = asRecord(await getJson(url, signal))
+  const item = asRecord(asArray(payload?.items)[0])
+  if (!item) return null
+  const snippet = asRecord(item.snippet)
+  const uploadsId = text(asRecord(asRecord(item.contentDetails)?.relatedPlaylists)?.uploads)
+  const id = text(item.id)
+  if (!id || !uploadsId) return null
+  const handle = text(snippet?.customUrl).replace(/^@/, '')
+  const title = decodeEntities(text(snippet?.title)) || handle || id
+  const rawUrl = handle ? `https://www.youtube.com/@${handle}` : `https://www.youtube.com/channel/${id}`
+  return { id, title, handle, url: safeYouTubeUrl(rawUrl), uploadsId }
+}
+
+async function lookupChannel(apiKey: string, query: string, signal?: AbortSignal): Promise<ResolvedChannel | null> {
+  const trimmed = query.trim()
+  const key = cacheKey(trimmed)
+  if (!key) return null
+  if (browseCache.has(key)) return browseCache.get(key) ?? null
+
+  let resolved: ResolvedChannel | null = null
+  if (isChannelId(trimmed)) {
+    resolved = await fetchChannel(apiKey, { id: trimmed }, signal)
+  } else {
+    const handle = trimmed.replace(/^@+/, '').replace(/\s+/g, '')
+    if (/^[\p{L}\p{N}._-]{3,30}$/u.test(handle)) {
+      try {
+        const byHandle = await fetchChannel(apiKey, { forHandle: handle }, signal)
+        if (byHandle && (trimmed.startsWith('@') || namesMatch(byHandle.title, byHandle.handle, trimmed))) {
+          resolved = byHandle
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') throw error
+        if (error instanceof YouTubeError && error.status !== 400 && error.status !== 404) throw error
+      }
+    }
+
+    const needsNameSearch = !resolved && (/\s/.test(trimmed) || /[^\u0000-\u007f]/.test(trimmed))
+    if (needsNameSearch) {
+      const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search')
+      searchUrl.searchParams.set('part', 'snippet')
+      searchUrl.searchParams.set('type', 'channel')
+      searchUrl.searchParams.set('maxResults', '5')
+      searchUrl.searchParams.set('q', trimmed)
+      searchUrl.searchParams.set('key', apiKey)
+      const payload = asRecord(await getJson(searchUrl, signal))
+      for (const item of asArray(payload?.items)) {
+        const row = asRecord(item)
+        const id = text(asRecord(row?.id)?.channelId)
+        const title = decodeEntities(text(asRecord(row?.snippet)?.title))
+        if (!id || !namesMatch(title, '', trimmed)) continue
+        resolved = await fetchChannel(apiKey, { id }, signal)
+        break
+      }
+    }
+  }
+
+  browseCache.set(key, resolved)
+  return resolved
+}
+
+function hasDetailFilters(filters: Filters): boolean {
+  return (
+    filters.videoDuration !== 'any' ||
+    filters.publishedWithin !== 'any' ||
+    filters.videoDefinition !== 'any' ||
+    filters.videoCaption !== 'any' ||
+    filters.videoLicense !== 'any' ||
+    filters.videoDimension !== 'any' ||
+    filters.safeSearch !== 'moderate' ||
+    filters.eventType !== 'any' ||
+    filters.videoCategoryId !== '' ||
+    filters.videoEmbeddable
+  )
+}
+
+async function listChannelUploads(
+  apiKey: string,
+  channel: ResolvedChannel,
+  filters: Filters,
+  pageToken: string | undefined,
+  signal: AbortSignal | undefined,
+  now: Date,
+): Promise<SearchPage> {
+  const playlistUrl = new URL('https://www.googleapis.com/youtube/v3/playlistItems')
+  playlistUrl.searchParams.set('part', 'snippet,contentDetails')
+  playlistUrl.searchParams.set('playlistId', channel.uploadsId)
+  playlistUrl.searchParams.set('maxResults', String(Math.min(50, Math.max(filters.maxResults, 1))))
+  if (pageToken) playlistUrl.searchParams.set('pageToken', pageToken)
+  playlistUrl.searchParams.set('key', apiKey)
+  const payload = asRecord(await getJson(playlistUrl, signal))
+  const items = asArray(payload?.items)
+  const ids = items
+    .map((item) => {
+      const row = asRecord(item)
+      const snippet = asRecord(row?.snippet)
+      return text(asRecord(row?.contentDetails)?.videoId) || text(asRecord(snippet?.resourceId)?.videoId)
+    })
+    .filter(Boolean)
+  const details = new Map<string, unknown>()
+  if (ids.length > 0) {
+    const detailUrl = new URL('https://www.googleapis.com/youtube/v3/videos')
+    detailUrl.searchParams.set('part', 'snippet,contentDetails,statistics,status')
+    detailUrl.searchParams.set('id', ids.join(','))
+    detailUrl.searchParams.set('key', apiKey)
+    const detailPayload = asRecord(await getJson(detailUrl, signal))
+    for (const entry of asArray(detailPayload?.items)) {
+      const id = text(asRecord(entry)?.id)
+      if (id) details.set(id, entry)
+    }
+  }
+
+  const enriched = items
+    .map((item) => {
+      const row = asRecord(item)
+      const snippet = asRecord(row?.snippet)
+      const videoId = text(asRecord(row?.contentDetails)?.videoId) || text(asRecord(snippet?.resourceId)?.videoId)
+      if (!videoId) return null
+      return mapVideo({ id: { videoId }, snippet }, details.get(videoId))
+    })
+    .filter((video): video is VideoResult => video !== null)
+    .map((video) => ({
+      ...video,
+      channelTitle: video.channelTitle || channel.title,
+      channelId: video.channelId || channel.id,
+      channelHandle: channel.handle,
+      channelUrl: channel.url,
+    }))
+
+  const ignoreQuery = filters.q.trim() === '' || namesMatch(channel.title, channel.handle, filters.q)
+  const scoped = { ...filters, channelId: '' }
+  const order = filters.order === 'relevance' ? 'date' : filters.order
+  const filtered = sortResults(filterCatalog(enriched, scoped, now, ignoreQuery), { ...scoped, order })
+  const pageInfo = asRecord(payload?.pageInfo)
+  const uploads = count(pageInfo?.totalResults)
+
+  return {
+    totalResults: hasDetailFilters(filters) || !ignoreQuery ? filtered.length : (uploads ?? filtered.length),
+    nextPageToken: text(payload?.nextPageToken) || undefined,
+    prevPageToken: text(payload?.prevPageToken) || undefined,
+    results: filtered,
+    channel: { title: channel.title, handle: channel.handle, url: channel.url },
+  }
+}
+
 export async function searchYouTube(
   apiKey: string,
   filters: Filters,
@@ -177,20 +300,19 @@ export async function searchYouTube(
   signal?: AbortSignal,
   now = new Date(),
 ): Promise<SearchPage> {
-  let next = filters
-  const channel = filters.channelId.trim()
-  if (channel && !isChannelId(channel)) {
-    const resolved = await resolveChannelId(apiKey, channel, signal)
-    if (!resolved) {
+  const browseQuery = filters.channelId.trim() || (filters.keywordOnly ? '' : filters.q.trim())
+  if (browseQuery) {
+    const channel = await lookupChannel(apiKey, browseQuery, signal)
+    if (channel) return listChannelUploads(apiKey, channel, filters, pageToken, signal, now)
+    if (filters.channelId.trim()) {
       throw new YouTubeError(
-        `No channel found for “${channel}”. Try another name, or paste a channel ID that starts with UC.`,
+        `No channel found for “${filters.channelId.trim()}”. Try another name, or paste a channel ID that starts with UC.`,
         404,
       )
     }
-    next = { ...filters, channelId: resolved }
   }
 
-  const params = buildSearchParams(next, pageToken, now)
+  const params = buildSearchParams(filters, pageToken, now)
   params.set('key', apiKey)
   const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search')
   searchUrl.search = params.toString()

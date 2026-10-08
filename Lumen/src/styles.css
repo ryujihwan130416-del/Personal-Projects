@@ -434,6 +434,15 @@ a.primary { display: inline-flex; align-items: center; text-decoration: none; }
   gap: 12px;
 }
 .result-head { margin: 8px 0 12px; }
+.channel-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
 .result-title {
   margin: 0;
   font-family: Syne, sans-serif;

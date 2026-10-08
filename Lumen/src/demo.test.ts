@@ -64,6 +64,24 @@ describe('sample catalog', () => {
     expect(second.results.every((video) => !seen.has(video.id))).toBe(true)
   })
 
+  it('lists every video from a channel when the query is that creator', () => {
+    const ed = searchDemo({ ...DEFAULT_FILTERS, q: 'Ed Sheeran' }, undefined, now)
+    expect(ed.channel?.title).toBe('Ed Sheeran')
+    expect(ed.totalResults).toBe(2)
+    expect(ed.results.every((video) => video.channelHandle === 'EdSheeran')).toBe(true)
+
+    const queen = searchDemo({ ...DEFAULT_FILTERS, q: '@Queen' }, undefined, now)
+    expect(queen.results.every((video) => video.channelTitle === 'Queen Official')).toBe(true)
+    expect(queen.totalResults).toBeGreaterThan(0)
+
+    const keyword = searchDemo({ ...DEFAULT_FILTERS, q: 'Ed Sheeran', keywordOnly: true }, undefined, now)
+    expect(keyword.channel).toBeUndefined()
+
+    const topic = searchDemo({ ...DEFAULT_FILTERS, q: 'official' }, undefined, now)
+    expect(topic.channel).toBeUndefined()
+    expect(topic.totalResults).toBeGreaterThan(4)
+  })
+
   it('finds the open movies and the python course', () => {
     const films = searchDemo({ ...DEFAULT_FILTERS, q: 'blender' }, undefined, now)
     expect(films.totalResults).toBe(4)
