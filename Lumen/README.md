@@ -52,7 +52,7 @@ A search costs about 100 quota units, plus a small call when a channel name has 
 
 ## Android APK
 
-`Lumen.apk` is a debug build of the same app, wrapped in an Android WebView. It needs Android 6 or newer. The app opens on a graph page. **Learn more** at the bottom opens the YouTube search.
+`Lumen.apk` opens on a graphing page titled Lumen. Expressions sit on the left, like a calculator. Settings holds the font, text size, dark mode, and a privacy policy at the bottom. **Learn more** in that policy opens the YouTube search.
 
 1. Copy `Lumen.apk` to the phone.
 2. Open it and allow installation from this source if Android asks.

@@ -268,7 +268,7 @@ export function App() {
     : ''
 
   if (screen === 'graph') {
-    return <GraphPad onLearnMore={() => setScreen('search')} />
+    return <GraphPad onOpenSearch={() => setScreen('search')} />
   }
 
   return (
