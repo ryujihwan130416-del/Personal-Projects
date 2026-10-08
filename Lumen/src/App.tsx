@@ -152,6 +152,7 @@ export function App() {
         setPage(null)
         setStatus('idle')
         setSearchError(null)
+        setSelected(null)
         setNotice('Enter a search, a channel, or choose a broadcast.')
       }
       return
@@ -281,6 +282,13 @@ export function App() {
                 event.preventDefault()
                 const next = { ...filters, channelId: channelDraft }
                 if (!hasSearchTarget(next)) {
+                  setFilters(next)
+                  setChannelDraft(next.channelId)
+                  setJob(null)
+                  setPage(null)
+                  setStatus('idle')
+                  setSearchError(null)
+                  setSelected(null)
                   setNotice('Enter a search, a channel, or choose a broadcast.')
                   return
                 }
@@ -492,6 +500,7 @@ function Results({
 }
 
 function Pager({ onPrev, onNext }: { onPrev?: () => void; onNext?: () => void }) {
+  if (!onPrev && !onNext) return null
   return (
     <div className="pager">
       <button type="button" className="ghost-btn" disabled={!onPrev} onClick={onPrev}>

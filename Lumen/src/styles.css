@@ -223,16 +223,18 @@ header {
   color: var(--cyan);
 }
 
-.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.seg[data-count="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .seg button {
-  flex: 1 1 auto;
   min-height: 36px;
+  min-width: 0;
   border: 0;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
-  padding: 6px 8px;
-  font-size: 13px;
+  padding: 6px 4px;
+  font-size: 12.5px;
+  white-space: nowrap;
 }
 .seg button[aria-pressed="true"] { background: var(--ink); color: #121418; }
 .seg { padding: 4px; border: 1px solid var(--line); border-radius: 16px; }

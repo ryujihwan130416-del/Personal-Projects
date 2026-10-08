@@ -24,7 +24,7 @@ export function Segmented<T extends string>({
       <span className="field-label" id={id}>
         {label}
       </span>
-      <div className="seg" role="group" aria-labelledby={id}>
+      <div className="seg" data-count={options.length} role="group" aria-labelledby={id}>
         {options.map((option) => (
           <button
             key={option.value}
