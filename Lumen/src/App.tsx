@@ -1,10 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { YouTubeError, fetchCategories, searchYouTube } from './api'
 import { searchDemo } from './demo'
 import { CATEGORIES, SUGGESTIONS } from './options'
 import { DEFAULT_FILTERS, activeChips, hasSearchTarget } from './query'
 import { hasStoredApiKey, readApiKey, writeApiKey } from './storage'
 import type { CategoryOption, Chip, Filters, SearchPage, VideoResult } from './types'
+
+function mergePages(current: SearchPage | null, next: SearchPage): SearchPage {
+  if (!current) return next
+  const seen = new Set(current.results.map((video) => video.id))
+  return {
+    ...next,
+    results: [...current.results, ...next.results.filter((video) => !seen.has(video.id))],
+    totalResults: Math.max(current.totalResults, next.totalResults),
+    channel: next.channel ?? current.channel,
+  }
+}
 import { FilterPanel, KeyDialog, PlayerDock, Skeletons, VideoCard } from './ui'
 import { formatCount } from './format'
 
@@ -12,6 +23,7 @@ type Job = {
   filters: Filters
   pageToken?: string
   id: number
+  append?: boolean
 }
 
 function useClock(): string {
@@ -44,7 +56,10 @@ export function App() {
   const [selected, setSelected] = useState<VideoResult | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [keyOpen, setKeyOpen] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [showLoadMore, setShowLoadMore] = useState(false)
   const streamRef = useRef<HTMLDivElement>(null)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
   const clock = useClock()
   const live = Boolean(apiKey) && !preferSample
   const chips = activeChips(job?.filters ?? filters, categories)
@@ -53,7 +68,12 @@ export function App() {
     if (!job) return
     const controller = new AbortController()
     let ignore = false
-    setStatus('loading')
+    if (job.append) setLoadingMore(true)
+    else {
+      setLoadingMore(false)
+      setShowLoadMore(false)
+      setStatus('loading')
+    }
     setSearchError(null)
 
     ;(async () => {
@@ -63,12 +83,14 @@ export function App() {
             ? await searchYouTube(apiKey, job.filters, job.pageToken, controller.signal)
             : searchDemo(job.filters, job.pageToken, new Date())
         if (ignore) return
-        setPage(nextPage)
+        setPage((current) => (job.append ? mergePages(current, nextPage) : nextPage))
         setStatus('ready')
       } catch (error) {
         if (ignore || (error instanceof DOMException && error.name === 'AbortError')) return
         setStatus('error')
         setSearchError(error instanceof Error ? error.message : 'Search failed.')
+      } finally {
+        if (!ignore) setLoadingMore(false)
       }
     })()
 
@@ -79,8 +101,24 @@ export function App() {
   }, [job, live, apiKey])
 
   useEffect(() => {
+    if (job?.append) return
     streamRef.current?.scrollTo({ top: 0 })
-  }, [job?.id])
+  }, [job?.id, job?.append])
+
+  useEffect(() => {
+    const root = streamRef.current
+    const node = loadMoreRef.current
+    if (!root || !node || !page?.nextPageToken) {
+      setShowLoadMore(false)
+      return
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowLoadMore(entry.isIntersecting),
+      { root, threshold: 0.4 },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [page?.nextPageToken, page?.results.length])
 
   useEffect(() => {
     if (!apiKey) {
@@ -122,6 +160,16 @@ export function App() {
     const query = job?.filters.q.trim()
     document.title = query ? `${query} — Lumen` : 'Lumen — YouTube search'
   }, [job?.filters.q])
+
+  function loadMore() {
+    if (!applied || !page?.nextPageToken || loadingMore || status === 'loading') return
+    setJob({
+      filters: applied,
+      pageToken: page.nextPageToken,
+      id: (job?.id ?? 0) + 1,
+      append: true,
+    })
+  }
 
   function issue(next: Filters, pageToken?: string, options?: { closeFilters?: boolean; preserveDraft?: boolean }) {
     if (!options?.preserveDraft) {
@@ -267,12 +315,12 @@ export function App() {
                 <div className="lens" aria-hidden="true" />
                 <p className="kicker">YouTube Data API</p>
                 <h2>
-                  Search YouTube
+                  추천 영상을 받으려면
                   <br />
-                  with every filter in reach.
+                  먼저 검색하세요.
                 </h2>
                 <p className="lede">
-                  Search a channel name to list that creator’s videos, or search a topic and narrow it with the filters.
+                  검색어가 들어간 영상부터 보여 줍니다. 맨 아래까지 내리면 Load More로 다음 페이지만 이어서 불러옵니다.
                 </p>
               </section>
             ) : null}
@@ -356,7 +404,7 @@ export function App() {
                 </button>
               </div>
             ) : (
-              <p className="hint quota">Each live search uses about 100 YouTube quota units.</p>
+              <p className="hint quota">Each search or Load More uses about 100 YouTube quota units. Only the next page is requested.</p>
             )}
 
             {searchError ? (
@@ -389,19 +437,13 @@ export function App() {
                 onSelect={(video) => setSelected((current) => (current?.id === video.id ? null : video))}
                 onKeyword={
                   applied.q.trim() && page.channel && !applied.keywordOnly
-                    ? () => issue({ ...applied, keywordOnly: true })
+                    ? () => issue({ ...applied, keywordOnly: true, channelId: '' })
                     : undefined
                 }
-                onPrev={
-                  page.prevPageToken
-                    ? () => issue(applied, page.prevPageToken, { preserveDraft: true })
-                    : undefined
-                }
-                onNext={
-                  page.nextPageToken
-                    ? () => issue(applied, page.nextPageToken, { preserveDraft: true })
-                    : undefined
-                }
+                loadMoreRef={loadMoreRef}
+                showLoadMore={showLoadMore && Boolean(page.nextPageToken)}
+                loadingMore={loadingMore}
+                onLoadMore={loadMore}
               />
             ) : null}
 
@@ -440,8 +482,10 @@ function Results({
   onChip,
   onSelect,
   onKeyword,
-  onPrev,
-  onNext,
+  loadMoreRef,
+  showLoadMore,
+  loadingMore,
+  onLoadMore,
 }: {
   title: string
   label: string
@@ -454,8 +498,10 @@ function Results({
   onChip: (chip: Chip) => void
   onSelect: (video: VideoResult) => void
   onKeyword?: () => void
-  onPrev?: () => void
-  onNext?: () => void
+  loadMoreRef: RefObject<HTMLDivElement | null>
+  showLoadMore: boolean
+  loadingMore: boolean
+  onLoadMore: () => void
 }) {
   return (
     <section className="results" aria-busy={loading}>
@@ -478,7 +524,6 @@ function Results({
             </p>
           ) : null}
         </div>
-        <Pager onPrev={onPrev} onNext={onNext} />
       </div>
       {chips.length > 0 ? (
         <div className="chips" aria-label="Active filters">
@@ -514,25 +559,18 @@ function Results({
           ))}
         </div>
       )}
-      {page.results.length > 0 ? (
-        <div className="pager-foot">
-          <Pager onPrev={onPrev} onNext={onNext} />
+      {page.nextPageToken ? (
+        <div className="load-more" ref={loadMoreRef}>
+          {showLoadMore ? (
+            <>
+              <button type="button" className="primary" onClick={onLoadMore} disabled={loadingMore || loading}>
+                {loadingMore ? 'Loading…' : 'Load More'}
+              </button>
+              <p className="hint">한 페이지씩만 불러옵니다.</p>
+            </>
+          ) : null}
         </div>
       ) : null}
     </section>
-  )
-}
-
-function Pager({ onPrev, onNext }: { onPrev?: () => void; onNext?: () => void }) {
-  if (!onPrev && !onNext) return null
-  return (
-    <div className="pager">
-      <button type="button" className="ghost-btn" disabled={!onPrev} onClick={onPrev}>
-        Previous
-      </button>
-      <button type="button" className="ghost-btn" disabled={!onNext} onClick={onNext}>
-        Next
-      </button>
-    </div>
   )
 }

@@ -277,15 +277,13 @@ async function listChannelUploads(
       channelUrl: channel.url,
     }))
 
-  const ignoreQuery = filters.q.trim() === '' || namesMatch(channel.title, channel.handle, filters.q)
   const scoped = { ...filters, channelId: '' }
-  const order = filters.order === 'relevance' ? 'date' : filters.order
-  const filtered = sortResults(filterCatalog(enriched, scoped, now, ignoreQuery), { ...scoped, order })
+  const filtered = sortResults(filterCatalog(enriched, scoped, now, true), scoped)
   const pageInfo = asRecord(payload?.pageInfo)
   const uploads = count(pageInfo?.totalResults)
 
   return {
-    totalResults: hasDetailFilters(filters) || !ignoreQuery ? filtered.length : (uploads ?? filtered.length),
+    totalResults: hasDetailFilters(filters) ? filtered.length : (uploads ?? filtered.length),
     nextPageToken: text(payload?.nextPageToken) || undefined,
     prevPageToken: text(payload?.prevPageToken) || undefined,
     results: filtered,
@@ -300,7 +298,7 @@ export async function searchYouTube(
   signal?: AbortSignal,
   now = new Date(),
 ): Promise<SearchPage> {
-  const browseQuery = filters.channelId.trim() || (filters.keywordOnly ? '' : filters.q.trim())
+  const browseQuery = filters.keywordOnly ? '' : filters.channelId.trim()
   if (browseQuery) {
     const channel = await lookupChannel(apiKey, browseQuery, signal)
     if (channel) return listChannelUploads(apiKey, channel, filters, pageToken, signal, now)
@@ -341,13 +339,17 @@ export async function searchYouTube(
   }
 
   const pageInfo = asRecord(payload?.pageInfo)
+  const results = sortResults(
+    items
+      .map((item) => mapVideo(item, details.get(text(asRecord(asRecord(item)?.id)?.videoId))))
+      .filter((video): video is VideoResult => video !== null),
+    filters,
+  )
   return {
     totalResults: count(pageInfo?.totalResults) ?? ids.length,
     nextPageToken: text(payload?.nextPageToken) || undefined,
     prevPageToken: text(payload?.prevPageToken) || undefined,
-    results: items
-      .map((item) => mapVideo(item, details.get(text(asRecord(asRecord(item)?.id)?.videoId))))
-      .filter((video): video is VideoResult => video !== null),
+    results,
   }
 }
 

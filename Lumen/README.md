@@ -37,8 +37,9 @@ A search costs about 100 quota units, plus a small call when a channel name has 
 
 ## Search
 
-- Type a channel name, `@handle`, or `UC…` id to list that creator’s public uploads, newest first. Use **Search as a keyword** if you wanted videos that merely mention the name.
-- Any other query searches videos. You can still narrow by channel in the filter column.
+- The first screen waits for a search. Results that contain the words come first, and the rest of the matches follow.
+- **Load More** appears at the bottom and requests only the next page.
+- A channel name in the channel filter lists that creator’s uploads. **Search as a keyword** goes back to a normal search.
 - Set filters before or after the first search. After a search, changing a filter runs again.
 - **Broadcast** (live, upcoming, replay) cannot be combined with length, quality, captions, license, dimension, category, or embeddable. YouTube rejects that combination, so those controls pause.
 - Region and language bias the ranking. They do not drop videos from other places.

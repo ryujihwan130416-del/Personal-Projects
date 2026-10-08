@@ -64,28 +64,21 @@ describe('sample catalog', () => {
     expect(second.results.every((video) => !seen.has(video.id))).toBe(true)
   })
 
-  it('lists every video from a channel when the query is that creator', () => {
+  it('puts videos that contain the query ahead of the rest', () => {
     const ed = searchDemo({ ...DEFAULT_FILTERS, q: 'Ed Sheeran' }, undefined, now)
-    expect(ed.channel?.title).toBe('Ed Sheeran')
-    expect(ed.totalResults).toBe(2)
-    expect(ed.results.every((video) => video.channelHandle === 'EdSheeran')).toBe(true)
+    expect(ed.totalResults).toBe(CATALOG.length)
+    expect(ed.results.slice(0, 2).every((video) => video.channelHandle === 'EdSheeran')).toBe(true)
+    expect(ed.results.some((video) => video.channelHandle !== 'EdSheeran')).toBe(true)
 
     const queen = searchDemo({ ...DEFAULT_FILTERS, q: '@Queen' }, undefined, now)
-    expect(queen.results.every((video) => video.channelTitle === 'Queen Official')).toBe(true)
-    expect(queen.totalResults).toBeGreaterThan(0)
+    expect(queen.results[0]?.channelTitle).toBe('Queen Official')
+    expect(queen.totalResults).toBe(CATALOG.length)
 
-    const keyword = searchDemo({ ...DEFAULT_FILTERS, q: 'Ed Sheeran', keywordOnly: true }, undefined, now)
-    expect(keyword.channel).toBeUndefined()
-
-    const topic = searchDemo({ ...DEFAULT_FILTERS, q: 'official' }, undefined, now)
-    expect(topic.channel).toBeUndefined()
-    expect(topic.totalResults).toBeGreaterThan(4)
-  })
-
-  it('finds the open movies and the python course', () => {
     const films = searchDemo({ ...DEFAULT_FILTERS, q: 'blender' }, undefined, now)
-    expect(films.totalResults).toBe(4)
+    expect(films.results.slice(0, 4).every((video) => video.channelHandle === 'BlenderOfficial')).toBe(true)
+    expect(films.totalResults).toBe(CATALOG.length)
     const course = searchDemo({ ...DEFAULT_FILTERS, q: 'python', videoDuration: 'long' }, undefined, now)
     expect(course.results[0]?.id).toBe('rfscVS0vtbw')
+    expect(course.totalResults).toBeGreaterThan(1)
   })
 })

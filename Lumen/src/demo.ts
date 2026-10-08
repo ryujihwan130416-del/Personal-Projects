@@ -89,21 +89,27 @@ function bias(video: VideoResult, filters: Filters): number {
   return score
 }
 
-function relevance(video: VideoResult, filters: Filters): number {
-  const terms = filters.q
+function queryTerms(query: string): string[] {
+  return query
     .trim()
     .toLowerCase()
+    .replace(/^@+/, '')
     .split(/\s+/)
     .filter(Boolean)
+}
+
+function termRank(video: VideoResult, terms: string[]): number {
+  if (terms.length === 0) return 0
   const title = video.title.toLowerCase()
   const channel = `${video.channelTitle} ${video.channelHandle}`.toLowerCase()
   const description = video.description.toLowerCase()
-  let score = bias(video, filters)
+  let score = 0
   for (const term of terms) {
-    if (title.includes(term)) score += 6
+    if (title.includes(term)) score += 8
     if (channel.includes(term)) score += 4
     if (description.includes(term)) score += 1
   }
+  if (terms.every((term) => title.includes(term))) score += 20
   return score
 }
 
@@ -113,7 +119,14 @@ function rating(video: VideoResult): number {
 }
 
 export function sortResults(videos: VideoResult[], filters: Filters): VideoResult[] {
-  return [...videos].sort((a, b) => compare(a, b, filters))
+  const terms = queryTerms(filters.q)
+  return [...videos].sort((a, b) => {
+    if (filters.order === 'relevance' && terms.length > 0) {
+      const rank = termRank(b, terms) - termRank(a, terms)
+      if (rank !== 0) return rank
+    }
+    return compare(a, b, filters)
+  })
 }
 
 function compare(a: VideoResult, b: VideoResult, filters: Filters): number {
@@ -132,7 +145,7 @@ function compare(a: VideoResult, b: VideoResult, filters: Filters): number {
       primary = a.title.localeCompare(b.title, 'en', { sensitivity: 'base' })
       break
     default:
-      primary = relevance(b, filters) - relevance(a, filters)
+      primary = bias(b, filters) - bias(a, filters)
       if (primary === 0) primary = (b.viewCount ?? 0) - (a.viewCount ?? 0)
       break
   }
@@ -145,15 +158,10 @@ function compare(a: VideoResult, b: VideoResult, filters: Filters): number {
 }
 
 export function searchDemo(filters: Filters, pageToken: string | undefined, now = new Date()): SearchPage {
-  const fromQuery = filters.keywordOnly ? null : findCatalogChannel(filters.q)
-  const channel = fromQuery ?? channelFromField(filters.channelId)
-  const ignoreQuery = Boolean(
-    fromQuery || (channel && (filters.q.trim() === '' || namesMatch(channel.title, channel.handle, filters.q))),
-  )
+  const channel = channelFromField(filters.channelId)
   const pool = channel ? CATALOG.filter((video) => video.channelHandle === channel.handle) : CATALOG
   const scoped = channel ? { ...filters, channelId: '' } : filters
-  const order = channel && filters.order === 'relevance' ? 'date' : filters.order
-  const sorted = sortResults(filterCatalog(pool, scoped, now, ignoreQuery), { ...scoped, order })
+  const sorted = sortResults(filterCatalog(pool, scoped, now, true), scoped)
   const size = clampResults(filters.maxResults)
   const offset = pageToken && /^\d+$/.test(pageToken) ? Number(pageToken) : 0
   return {
