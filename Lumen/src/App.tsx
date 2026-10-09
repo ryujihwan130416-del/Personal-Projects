@@ -18,6 +18,7 @@ function mergePages(current: SearchPage | null, next: SearchPage): SearchPage {
 }
 import { FilterPanel, KeyDialog, PlayerDock, Skeletons, VideoCard } from './ui'
 import { formatCount } from './format'
+import { GraphPad } from './GraphPad'
 
 const KEY_REQUIRED = '실제 유튜브 영상을 검색하려면 YouTube Data API 키가 필요합니다.'
 
@@ -60,6 +61,7 @@ export function App() {
   const [keyOpen, setKeyOpen] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [showLoadMore, setShowLoadMore] = useState(false)
+  const [screen, setScreen] = useState<'graph' | 'search'>('graph')
   const streamRef = useRef<HTMLDivElement>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const clock = useClock()
@@ -173,7 +175,7 @@ export function App() {
 
   useEffect(() => {
     const query = job?.filters.q.trim()
-    document.title = query ? `${query} — Lumen` : 'Lumen — YouTube search'
+    document.title = query ? `${query} — Lumen` : 'Lumen'
   }, [job?.filters.q])
 
   function loadMore() {
@@ -265,6 +267,10 @@ export function App() {
     ? `${sampleMode ? '샘플 · ' : ''}${formatCount(page.totalResults)} ${resultNoun}${page.totalResults === 1 ? '' : 's'}`
     : ''
 
+  if (screen === 'graph') {
+    return <GraphPad onOpenSearch={() => setScreen('search')} />
+  }
+
   return (
     <div className="app">
       <a className="skip" href="#results">
@@ -275,10 +281,12 @@ export function App() {
           <span className="mark" aria-hidden="true" />
           <div>
             <h1>Lumen</h1>
-            <p>YouTube search</p>
           </div>
         </div>
         <div className="header-actions">
+          <button type="button" className="text-btn graph-return" onClick={() => setScreen('graph')}>
+            Graph
+          </button>
           <button
             type="button"
             className="filter-toggle"
