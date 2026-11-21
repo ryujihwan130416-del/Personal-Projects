@@ -47,6 +47,7 @@ export function AppShell() {
   const { locale } = useLocale()
   const ui = useUiConfig()
   const narrow = useNarrow()
+  const hideMenu = useLumenOpen()
   const shellClass = isChat ? 'detail' : isList ? 'list' : 'page-fill'
   // Feed & Profile use the slim sidebar (icon + label in a row); everything else the classic rail.
   const slimNav = /^\/(feed|post|compose|profile|u\/|settings)/.test(loc.pathname)
@@ -82,10 +83,12 @@ export function AppShell() {
 
   return (
     <div className={`shell ${shellClass}${slimNav ? ' nav-slim' : ''}`}>
-      <nav className="nav-rail">
-        <div className="brand-mini"><IconLogo size={30} /><b className="brand-name">{t('app.name')}</b></div>
-        {tabs}
-      </nav>
+      {hideMenu ? null : (
+        <nav className="nav-rail">
+          <div className="brand-mini"><IconLogo size={30} /><b className="brand-name">{t('app.name')}</b></div>
+          {tabs}
+        </nav>
+      )}
       <div className="shell-body">
         {isChatsSection && !(isChat && narrow) ? (
           <aside className="sidebar">
@@ -104,7 +107,7 @@ export function AppShell() {
           )}
         </main>
       </div>
-      <nav className="tabbar">{tabs}</nav>
+      {hideMenu ? null : <nav className="tabbar">{tabs}</nav>}
       <PrefsSync />
       <ModerationGate />
       <Alerts />
@@ -117,6 +120,18 @@ export function AppShell() {
       <CallOverlays />
     </div>
   )
+}
+
+function useLumenOpen() {
+  const [open, setOpen] = useState(() => document.documentElement.dataset.lumen === '1')
+  useEffect(() => {
+    const sync = () => setOpen(document.documentElement.dataset.lumen === '1')
+    sync()
+    const obs = new MutationObserver(sync)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-lumen'] })
+    return () => obs.disconnect()
+  }, [])
+  return open
 }
 
 function useNarrow() {
