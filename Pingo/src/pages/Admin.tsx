@@ -49,6 +49,14 @@ export function AdminPage() {
   useEffect(() => { const u = new URL(location.href); u.searchParams.set('tab', tab); history.replaceState(history.state, '', u) }, [tab])
 
   const go = useCallback((t: Tab, f = '') => { setTab(t); setFocus(f) }, [])
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== location.origin) return
+      if (event.data?.type === 'lumen-exit') go('ui')
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [go])
   const ctx = useMemo(() => ({ adminUid: user?.uid ?? '', users, byUid: new Map(users.map((u) => [u.uid, u])), reloadUsers, go, focus, toast }), [user?.uid, users, reloadUsers, go, focus, toast])
 
   if (!admin) {
@@ -80,10 +88,7 @@ export function AdminPage() {
         {err ? <p className="a-note bad">{err}</p> : null}
         <div className={`admin-body${tab === 'lumen' ? ' lumen' : ''}`} key={tab}>
           {tab === 'lumen' ? (
-            <>
-              <iframe className="admin-lumen" title="Lumen" src="/lumen/index.html" data-testid="admin-lumen" />
-              <button type="button" className="admin-lumen-exit" onClick={() => go('ui')}>관리자</button>
-            </>
+            <iframe className="admin-lumen" title="Lumen" src="/lumen/index.html" data-testid="admin-lumen" />
           ) : tab === 'dashboard' ? <Dashboard /> : tab === 'reports' ? <Reports /> : tab === 'flags' ? <Flags /> : tab === 'users' ? <Users /> : tab === 'chats' ? <Chats /> : tab === 'posts' ? <Posts /> : tab === 'announce' ? <Announce /> : tab === 'filter' ? <Filter /> : <UiEditor />}
         </div>
       </div>

@@ -20,6 +20,7 @@ function mergePages(current: SearchPage | null, next: SearchPage): SearchPage {
 import { FilterPanel, KeyDialog, PlayerDock, Skeletons, VideoCard } from './ui'
 import { formatCount } from './format'
 import { GraphPad } from './GraphPad'
+import { embeddedLumen, leaveLumen } from './embed'
 
 const KEY_REQUIRED = '실제 유튜브 영상을 검색하려면 YouTube Data API 키가 필요합니다.'
 
@@ -374,6 +375,11 @@ export function App() {
         Skip to results
       </a>
       <header>
+        {embeddedLumen() ? (
+          <button type="button" className="lumen-exit" onClick={leaveLumen}>
+            나가기
+          </button>
+        ) : null}
         <div className="brand-lockup">
           <span className="mark" aria-hidden="true" />
           <div>

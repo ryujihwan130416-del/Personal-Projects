@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { embeddedLumen, leaveLumen } from './embed'
 import { compileExpression } from './graph'
 
 type View = { panX: number; panY: number; scale: number }
@@ -225,6 +226,11 @@ export function GraphPad({ onOpenSearch }: { onOpenSearch: () => void }) {
         </button>
       </aside>
       <div className="graph-stage">
+        {embeddedLumen() ? (
+          <button type="button" className="lumen-exit" onClick={leaveLumen}>
+            나가기
+          </button>
+        ) : null}
         <div className="graph-zoom">
           <button type="button" aria-label="Zoom in" onClick={() => setView((v) => ({ ...v, scale: Math.min(180, v.scale * 1.2) }))}>
             +
