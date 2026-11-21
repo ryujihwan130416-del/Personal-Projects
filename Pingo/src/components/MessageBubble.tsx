@@ -1,6 +1,6 @@
 import { isImeEnter } from '../lib/ime'
 import { dateLocale, tx } from '../i18n'
-import { useEffect, useMemo, useRef, useState, type JSX, type MouseEvent } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type JSX, type MouseEvent } from 'react'
 import { Sticker } from '../lib/stickers'
 import { useNavigate } from 'react-router-dom'
 import type { MessageDoc } from '../types'
@@ -54,7 +54,7 @@ function VoicePlayer({ src, duration }: { src: string; duration: number }) {
   )
 }
 
-export function MessageBubble({
+function MessageBubbleInner({
   msg,
   mine,
   myUid,
@@ -287,6 +287,29 @@ export function MessageBubble({
     </>
   )
 }
+
+function sameRecord(a?: Record<string, string>, b?: Record<string, string>) {
+  if (a === b) return true
+  const ak = Object.keys(a ?? {})
+  const bk = Object.keys(b ?? {})
+  return ak.length === bk.length && ak.every((k) => a?.[k] === b?.[k])
+}
+function sameRead(a?: MessageDoc['readBy'], b?: MessageDoc['readBy']) {
+  if (a === b) return true
+  const ak = Object.keys(a ?? {})
+  const bk = Object.keys(b ?? {})
+  return ak.length === bk.length && ak.every((k) => (a?.[k]?.toMillis?.() ?? 0) === (b?.[k]?.toMillis?.() ?? 0))
+}
+export const MessageBubble = memo(MessageBubbleInner, (a, b) => (
+  a.mine === b.mine && a.myUid === b.myUid && a.showTime === b.showTime && a.readState === b.readState
+  && a.highlight === b.highlight && a.senderName === b.senderName
+  && a.onReply === b.onReply && a.onReact === b.onReact && a.onEdit === b.onEdit
+  && a.onDelete === b.onDelete && a.onReport === b.onReport && a.onOpenPhoto === b.onOpenPhoto && a.onJump === b.onJump
+  && a.msg.id === b.msg.id && a.msg.text === b.msg.text && a.msg.type === b.msg.type && a.msg.unsent === b.msg.unsent
+  && a.msg.edited === b.msg.edited && a.msg.photoURL === b.msg.photoURL && a.msg.audioURL === b.msg.audioURL
+  && a.msg.fileURL === b.msg.fileURL && a.msg.stickerId === b.msg.stickerId && a.msg.fileName === b.msg.fileName
+  && sameRecord(a.msg.reactions, b.msg.reactions) && sameRead(a.msg.readBy, b.msg.readBy)
+))
 
 /** Wraps every case-insensitive occurrence of `q` in <mark>. */
 export function markText(text: string, q: string): (string | JSX.Element)[] {

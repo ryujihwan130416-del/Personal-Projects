@@ -8,6 +8,7 @@ import {
   limit,
   query,
   serverTimestamp,
+  Timestamp,
   setDoc,
   updateDoc,
   where,
@@ -253,14 +254,15 @@ export async function endGame(room: GameRoom, winnerId: string | null) {
         type: 'game',
         gameId: room.id,
         gameType: room.type,
-        createdAt: serverTimestamp(),
+        createdAt: Timestamp.now(),
         unsent: false,
         reactions: {},
-        readBy: { [room.hostId]: serverTimestamp() },
+        readBy: { [room.hostId]: Timestamp.now() },
       })
+      const sentAt = Timestamp.now()
       const unread: Record<string, unknown> = {
-        lastMessage: { text: resultText, senderId: room.hostId, type: 'game', createdAt: serverTimestamp() },
-        lastMessageAt: serverTimestamp(),
+        lastMessage: { text: resultText, senderId: room.hostId, type: 'game', createdAt: sentAt },
+        lastMessageAt: sentAt,
       }
       for (const id of room.playerIds) {
         if (id !== room.hostId) unread[`unread.${id}`] = increment(1)

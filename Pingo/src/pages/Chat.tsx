@@ -1,4 +1,4 @@
-import { pingMembers } from '../lib/pushPing'
+import { pingMembers, warmAndroid } from '../lib/pushPing'
 import { isComposingNow, isImeEnter } from '../lib/ime'
 import { dateLocale, tx } from '../i18n'
 import { ReportDialog, type ReportTarget } from '../components/ReportDialog'
@@ -16,14 +16,17 @@ import {
   deleteField,
   doc,
   increment,
+  limitToLast,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore'
 import { onDisconnect, ref as rref, remove, set } from 'firebase/database'
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Avatar } from '../components/Avatar'
 import { IconSearch, IconBack, IconCal, IconCamera, IconClip, IconClose, IconFile, IconGame, IconMic, IconMore, IconPhone, IconSend, IconStop, IconVideo } from '../components/Icons'
@@ -83,6 +86,110 @@ function sysText(text: string): string {
   if (m) return tx('{name} turned off disappearing messages', { name: m[1] })
   return text
 }
+
+type StreamActions = {
+  readStateOf: (m: MessageDoc) => ReadState
+  nameOf: (id: string) => string
+  setReplyTo: (m: MessageDoc) => void
+  react: (m: MessageDoc, emoji: string) => void
+  editMsg: (m: MessageDoc, value: string) => Promise<void>
+  unsend: (m: MessageDoc) => void
+  report: (m: MessageDoc) => void
+  setPhoto: (url: string) => void
+  jump: (id: string) => void
+  focus: () => void
+}
+
+const MessageStream = memo(function MessageStream({
+  visible, uid, chatType, memberInfo, highlight, hitId, typingText, showTyping, lastMineId, readReceipt,
+  reachedStart, onEarlier, actions, listRef, bottomRef, stickRef,
+}: {
+  visible: MessageDoc[]
+  uid: string
+  chatType: string
+  memberInfo: ChatDoc['memberInfo']
+  highlight: string
+  hitId?: string
+  typingText: string
+  showTyping: boolean
+  lastMineId?: string
+  readReceipt: string
+  reachedStart: boolean
+  onEarlier: () => void
+  actions: { current: StreamActions }
+  listRef: RefObject<HTMLDivElement | null>
+  bottomRef: RefObject<HTMLDivElement | null>
+  stickRef: { current: boolean }
+}) {
+  const onReply = useCallback((m: MessageDoc) => { actions.current.setReplyTo(m); actions.current.focus() }, [actions])
+  const onReact = useCallback((m: MessageDoc, emoji: string) => { void actions.current.react(m, emoji) }, [actions])
+  const onEdit = useCallback((m: MessageDoc, value: string) => actions.current.editMsg(m, value), [actions])
+  const onDelete = useCallback((m: MessageDoc) => { void actions.current.unsend(m) }, [actions])
+  const onReport = useCallback((m: MessageDoc) => actions.current.report(m), [actions])
+  const onOpenPhoto = useCallback((url: string) => actions.current.setPhoto(url), [actions])
+  const onJump = useCallback((id: string) => actions.current.jump(id), [actions])
+  const nameOf = useCallback((id: string) => actions.current.nameOf(id), [actions])
+  return (
+    <div
+      className="messages"
+      data-testid="messages"
+      ref={listRef}
+      onScroll={(e) => { const el = e.currentTarget; stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120 }}
+      onLoadCapture={() => { const el = listRef.current; if (el && stickRef.current) el.scrollTop = el.scrollHeight }}
+    >
+      {reachedStart ? null : (
+        <button type="button" className="day-div" onClick={onEarlier} data-testid="earlier-messages">{tx('Earlier messages')}</button>
+      )}
+      {visible.map((m, i) => {
+        const prev = visible[i - 1]
+        const ms = m.createdAt?.toMillis() ?? 0
+        const pms = prev?.createdAt?.toMillis() ?? 0
+        const showDay = !prev || (ms && pms && !isSameDay(ms, pms))
+        const same = prev && prev.senderId === m.senderId && !showDay
+        if (m.type === 'system') {
+          return (
+            <div key={m.id} id={`msg-${m.id}`}>
+              {showDay && ms ? <div className="day-div">{formatDateDivider(ms)}</div> : null}
+              <div className="sys-msg" data-testid="sys-msg">{sysText(m.text)}</div>
+            </div>
+          )
+        }
+        return (
+          <div key={m.id} className={hitId === m.id ? 'search-current' : ''}>
+            {showDay && ms ? <div className="day-div">{formatDateDivider(ms)}</div> : null}
+            <div className={same ? 'same' : 'gap'}>
+              <MessageBubble
+                msg={m}
+                mine={m.senderId === uid}
+                myUid={uid}
+                showTime={!visible[i + 1] || visible[i + 1].senderId !== m.senderId}
+                readState={m.senderId === uid && (!visible[i + 1] || visible[i + 1].senderId !== m.senderId) ? actions.current.readStateOf(m) : undefined}
+                senderName={chatType === 'group' && m.senderId !== uid && !same ? memberInfo[m.senderId]?.displayName : undefined}
+                nameOf={nameOf}
+                onReply={onReply}
+                onReact={onReact}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onReport={onReport}
+                onOpenPhoto={onOpenPhoto}
+                onJump={onJump}
+                highlight={highlight}
+              />
+            </div>
+            {lastMineId === m.id ? <div className="read-receipt" data-testid="read-receipt">{readReceipt}</div> : null}
+          </div>
+        )
+      })}
+      {showTyping ? (
+        <div className="typing-row" data-testid="typing-indicator">
+          <span className="dots"><i /><i /><i /></span>
+          {typingText}
+        </div>
+      ) : null}
+      <div ref={bottomRef} />
+    </div>
+  )
+})
 
 export function ChatPage() {
   const { chatId } = useParams()
@@ -145,13 +252,18 @@ export function ChatPage() {
     })
   }, [chatId])
 
+  const [msgWindow, setMsgWindow] = useState(80)
+  const [reachedStart, setReachedStart] = useState(false)
+  useEffect(() => { setMsgWindow(80); setReachedStart(false) }, [chatId])
   useEffect(() => {
     if (!chatId) return
-    const qy = query(collection(db, ...fsCol('chats', chatId, 'messages')), orderBy('createdAt', 'asc'))
+    // The newest page only. Loading the whole history on every keystroke was freezing the chat.
+    const qy = query(collection(db, ...fsCol('chats', chatId, 'messages')), orderBy('createdAt', 'asc'), limitToLast(msgWindow))
     return onSnapshot(qy, (snap) => {
       setMessages(snap.docs.map((d) => asMsg(d.id, d.data())))
+      setReachedStart(snap.docs.length < msgWindow)
     })
-  }, [chatId])
+  }, [chatId, msgWindow])
 
   // Disappearing messages: hidden once expired, and deleted by whichever member's app sees them first.
   useEffect(() => { const id = window.setInterval(() => setNow(Date.now()), 15000); return () => window.clearInterval(id) }, [])
@@ -182,6 +294,8 @@ export function ChatPage() {
   const blocked = chat?.type === 'dm' && title.peerId ? isBlocked(title.peerId) || (chat.blockedUids ?? []).includes(uid) : false
   const peerOnline = title.peerId ? presence[title.peerId]?.state === 'online' : false
   const peerLast = title.peerId ? presence[title.peerId]?.lastActive : 0
+  const peerKey = peerIds.join(',')
+  useEffect(() => { if (peerKey) warmAndroid(peerKey.split(',')) }, [peerKey])
 
   useEffect(() => {
     // First paint of a chat jumps straight to the newest message; later ones scroll smoothly.
@@ -193,24 +307,35 @@ export function ChatPage() {
     }
   }, [messages.length, typers.length])
 
+  const unreadCount = chat?.unread?.[uid] ?? 0
   useEffect(() => {
-    if (!chatId || !uid || !chat) return
-    if ((chat.unread?.[uid] ?? 0) > 0) {
-      void updateDoc(doc(db, ...fsCol('chats', chatId)), { [`unread.${uid}`]: 0 })
-    }
-    const unreadMsgs = messages.filter((m) => m.senderId !== uid && !m.readBy?.[uid] && m.createdAt)
-    for (const m of unreadMsgs) {
-      if (marked.current.has(m.id)) continue
-      marked.current.add(m.id)
-      void updateDoc(doc(db, ...fsCol('chats', chatId, 'messages', m.id)), {
-        [`readBy.${uid}`]: serverTimestamp(),
-      }).catch((err) => {
-        marked.current.delete(m.id)
-        console.warn('read mark failed', m.id, err)
+    if (!chatId || !uid || unreadCount <= 0) return
+    void updateDoc(doc(db, ...fsCol('chats', chatId)), { [`unread.${uid}`]: 0 })
+  }, [unreadCount, chatId, uid])
+  useEffect(() => {
+    if (!chatId || !uid) return
+    const pending = messages.filter((m) => m.senderId !== uid && !m.readBy?.[uid] && m.createdAt && !marked.current.has(m.id)).slice(-40)
+    if (!pending.length) return
+    const handle = window.setTimeout(() => {
+      const batch = writeBatch(db)
+      const ids: string[] = []
+      const seen = Timestamp.now()
+      for (const m of pending) {
+        if (marked.current.has(m.id)) continue
+        marked.current.add(m.id)
+        ids.push(m.id)
+        batch.update(doc(db, ...fsCol('chats', chatId, 'messages', m.id)), { [`readBy.${uid}`]: seen })
+      }
+      if (!ids.length) return
+      void batch.commit().catch((err) => {
+        ids.forEach((id) => marked.current.delete(id))
+        console.warn('read mark failed', err)
       })
-    }
-  }, [messages, chatId, uid, chat])
+    }, 200)
+    return () => window.clearTimeout(handle)
+  }, [messages, chatId, uid])
 
+  const typingOn = useRef(false)
   const setTyping = (on: boolean) => {
     if (!chatId || !uid) return
     const r = rref(rtdb, `dmly/typing/${chatId}/${uid}`)
@@ -224,9 +349,10 @@ export function ChatPage() {
 
   const onChangeText = (value: string) => {
     setText(value)
-    setTyping(true)
+    // One write when typing starts, not one per key. The echo of each write was redrawing the thread.
+    if (!typingOn.current) { typingOn.current = true; setTyping(true) }
     window.clearTimeout(typingTimer.current)
-    typingTimer.current = window.setTimeout(() => setTyping(false), 1400)
+    typingTimer.current = window.setTimeout(() => { typingOn.current = false; setTyping(false) }, 1400)
   }
 
   useEffect(() => () => { setTyping(false) }, [chatId, uid])
@@ -258,36 +384,39 @@ export function ChatPage() {
       const reply = replyTo
         ? { id: replyTo.id, text: replyTo.unsent ? t('chat.unsentShort') : (replyTo.text || (replyTo.type === 'voice' ? '🎤 Voice message' : replyTo.type === 'file' ? `📎 ${replyTo.fileName ?? 'File'}` : t('common.photo'))), senderId: replyTo.senderId }
         : null
-      const msgRef = await addDoc(collection(db, ...fsCol('chats', chatId, 'messages')), {
+      // A client timestamp is visible in ordered queries immediately. A server timestamp stays hidden until the round trip finishes.
+      const sentAt = Timestamp.now()
+      const msgRef = doc(collection(db, ...fsCol('chats', chatId, 'messages')))
+      const saved = setDoc(msgRef, {
         senderId: user.uid,
         text: body,
         type,
         photoURL: extra?.photoURL ?? null,
         ...(extra?.fields ?? {}),
         ...(chat.disappearAfter ? { expiresAt: Timestamp.fromMillis(Date.now() + chat.disappearAfter * 1000) } : {}),
-        createdAt: serverTimestamp(),
+        createdAt: sentAt,
         unsent: false,
         replyTo: reply,
         reactions: {},
-        readBy: { [user.uid]: serverTimestamp() },
+        readBy: { [user.uid]: sentAt },
       })
+      const preview = String(extra?.preview ?? (type === 'photo' ? t('common.photo') : type === 'voice' ? '🎤 Voice message' : body) ?? '')
+      const isGroup = chat.type === 'group'
+      pingMembers(user.uid, chat.memberIds, msgRef.id, { kind: 'msg', chatId, title: isGroup ? `${chat.title || 'Group'} · ${profile.displayName}` : profile.displayName, body: preview, ...(isGroup ? { group: chat.title || 'Group' } : {}) })
       const unreadPatch: Record<string, unknown> = {
-        lastMessage: { text: extra?.preview ?? (type === 'photo' ? t('common.photo') : body), senderId: user.uid, type, createdAt: serverTimestamp() },
-        lastMessageAt: serverTimestamp(),
+        lastMessage: { text: extra?.preview ?? (type === 'photo' ? t('common.photo') : body), senderId: user.uid, type, createdAt: sentAt },
+        lastMessageAt: sentAt,
         [`memberInfo.${user.uid}`]: { displayName: profile.displayName, username: profile.username, photoURL: profile.photoURL },
       }
       for (const id of chat.memberIds) {
         if (id !== user.uid) unreadPatch[`unread.${id}`] = increment(1)
       }
-      await updateDoc(doc(db, ...fsCol('chats', chatId)), unreadPatch)
-      {
-        const preview = String(extra?.preview ?? (type === 'photo' ? t('common.photo') : type === 'voice' ? '🎤 Voice message' : body) ?? '')
-        const isGroup = chat.type === 'group'
-        pingMembers(user.uid, chat.memberIds, msgRef.id, { kind: 'msg', chatId, title: isGroup ? `${chat.title || 'Group'} · ${profile.displayName}` : profile.displayName, body: preview, ...(isGroup ? { group: chat.title || 'Group' } : {}) })
-      }
+      void updateDoc(doc(db, ...fsCol('chats', chatId)), unreadPatch).catch(() => { /* the message itself already went out */ })
+      await saved
       countMessage()
       // Local content filter: the message is already sent; matches are flagged for the admin.
       if (body) void autoFlag({ chatId, messageId: msgRef.id, senderId: user.uid, text: body, flaggedBy: user.uid, source: 'send' })
+      typingOn.current = false
       setTyping(false)
     } catch (err) {
       if (fromComposer) setText((cur) => cur || body)
@@ -417,6 +546,25 @@ export function ChatPage() {
     const others = (chat?.memberIds ?? []).filter((id) => id !== uid)
     return others.length && others.every((id) => m.readBy?.[id]) ? 'read' : 'sent'
   }
+  const streamActions = useRef<StreamActions>(null!)
+  streamActions.current = {
+    readStateOf,
+    nameOf,
+    setReplyTo,
+    react,
+    editMsg,
+    unsend,
+    report: (m) => setReporting({
+      type: 'message', targetUid: m.senderId, targetId: m.id, chatId: chat?.id, snapshot: {
+        text: m.text || (m.type === 'photo' ? '[photo]' : m.type === 'voice' ? '[voice message]' : m.type === 'file' ? `[file] ${m.fileName ?? ''}` : ''),
+        kind: m.type, name: nameOf(m.senderId),
+      },
+    }),
+    setPhoto,
+    jump,
+    focus: () => inputRef.current?.focus(),
+  }
+  const loadEarlier = useCallback(() => { stickRef.current = false; setMsgWindow((n) => n + 80) }, [])
 
   const sendSticker = async (id: string) => {
     pushRecent(id)
@@ -430,7 +578,7 @@ export function ChatPage() {
     try {
       await updateDoc(doc(db, ...fsCol('chats', chatId)), { disappearAfter: sec })
       await addDoc(collection(db, ...fsCol('chats', chatId, 'messages')), {
-        senderId: user.uid, type: 'system', createdAt: serverTimestamp(), unsent: false, reactions: {}, readBy: { [user.uid]: serverTimestamp() },
+        senderId: user.uid, type: 'system', createdAt: Timestamp.now(), unsent: false, reactions: {}, readBy: { [user.uid]: Timestamp.now() },
         // Stored in English (canonical) and localized for each viewer by sysText().
         text: sec ? `${profile.displayName} turned on disappearing messages · new messages vanish after ${DISAPPEAR_OPTIONS.find(([v]) => v === sec)?.[1] ?? `${Math.round(sec / 3600)} h`}` : `${profile.displayName} turned off disappearing messages`,
       })
@@ -525,14 +673,15 @@ export function ChatPage() {
         type: 'game',
         gameId: id,
         gameType: type,
-        createdAt: serverTimestamp(),
+        createdAt: Timestamp.now(),
         unsent: false,
         reactions: {},
-        readBy: { [user.uid]: serverTimestamp() },
+        readBy: { [user.uid]: Timestamp.now() },
       })
+      const sentAt = Timestamp.now()
       const unreadPatch: Record<string, unknown> = {
-        lastMessage: { text: t('chat.invitePreview', { name: info.name }), senderId: user.uid, type: 'game', createdAt: serverTimestamp() },
-        lastMessageAt: serverTimestamp(),
+        lastMessage: { text: t('chat.invitePreview', { name: info.name }), senderId: user.uid, type: 'game', createdAt: sentAt },
+        lastMessageAt: sentAt,
       }
       for (const id2 of chat.memberIds) {
         if (id2 !== user.uid) unreadPatch[`unread.${id2}`] = increment(1)
@@ -595,65 +744,24 @@ export function ChatPage() {
         </div>
       ) : null}
 
-      <div
-        className="messages"
-        data-testid="messages"
-        ref={listRef}
-        onScroll={(e) => { const el = e.currentTarget; stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120 }}
-        onLoadCapture={() => { const el = listRef.current; if (el && stickRef.current) el.scrollTop = el.scrollHeight }}
-      >
-        {visible.map((m, i) => {
-          const messages = visible
-          const prev = messages[i - 1]
-          const ms = m.createdAt?.toMillis() ?? 0
-          const pms = prev?.createdAt?.toMillis() ?? 0
-          const showDay = !prev || (ms && pms && !isSameDay(ms, pms))
-          const same = prev && prev.senderId === m.senderId && !showDay
-          if (m.type === 'system') {
-            return (
-              <div key={m.id} id={`msg-${m.id}`}>
-                {showDay && ms ? <div className="day-div">{formatDateDivider(ms)}</div> : null}
-                <div className="sys-msg" data-testid="sys-msg">{sysText(m.text)}</div>
-              </div>
-            )
-          }
-          const isHit = !!q.trim() && matches[hit]?.id === m.id
-          return (
-            <div key={m.id} className={isHit ? 'search-current' : ''}>
-              {showDay && ms ? <div className="day-div">{formatDateDivider(ms)}</div> : null}
-              <div className={same ? 'same' : 'gap'}>
-                <MessageBubble
-                  msg={m}
-                  mine={m.senderId === uid}
-                  myUid={uid}
-                  showTime={!messages[i + 1] || messages[i + 1].senderId !== m.senderId}
-                  readState={m.senderId === uid && (!messages[i + 1] || messages[i + 1].senderId !== m.senderId) ? readStateOf(m) : undefined}
-                  senderName={chat.type === 'group' && m.senderId !== uid && !same ? chat.memberInfo[m.senderId]?.displayName : undefined}
-                  nameOf={nameOf}
-                  onReply={(mm) => { setReplyTo(mm); inputRef.current?.focus() }}
-                  onReact={(mm, e) => void react(mm, e)}
-                  onEdit={editMsg}
-                  onDelete={(mm) => void unsend(mm)}
-                  onReport={(mm) => setReporting({ type: 'message', targetUid: mm.senderId, targetId: mm.id, chatId: chat.id, snapshot: { text: mm.text || (mm.type === 'photo' ? '[photo]' : mm.type === 'voice' ? '[voice message]' : mm.type === 'file' ? `[file] ${mm.fileName ?? ''}` : ''), kind: mm.type, name: nameOf(mm.senderId) } })}
-                  onOpenPhoto={setPhoto}
-                  onJump={jump}
-                  highlight={searchOpen ? q.trim() : ''}
-                />
-              </div>
-              {lastMine && m.id === lastMine.id ? (
-                <div className="read-receipt" data-testid="read-receipt">{readReceipt}</div>
-              ) : null}
-            </div>
-          )
-        })}
-        {typers.length ? (
-          <div className="typing-row" data-testid="typing-indicator">
-            <span className="dots"><i /><i /><i /></span>
-            {typingText}
-          </div>
-        ) : null}
-        <div ref={bottomRef} />
-      </div>
+      <MessageStream
+        visible={visible}
+        uid={uid}
+        chatType={chat.type}
+        memberInfo={chat.memberInfo}
+        highlight={searchOpen ? q.trim() : ''}
+        hitId={q.trim() ? matches[hit]?.id : undefined}
+        typingText={typingText}
+        showTyping={typers.length > 0}
+        lastMineId={lastMine?.id}
+        readReceipt={readReceipt}
+        reachedStart={reachedStart}
+        onEarlier={loadEarlier}
+        actions={streamActions}
+        listRef={listRef}
+        bottomRef={bottomRef}
+        stickRef={stickRef}
+      />
 
       {replyTo ? (
         <div className="reply-bar" data-testid="reply-bar">
@@ -788,14 +896,15 @@ export function ChatPage() {
                   text: body,
                   type: 'event',
                   eventId: id,
-                  createdAt: serverTimestamp(),
+                  createdAt: Timestamp.now(),
                   unsent: false,
                   reactions: {},
-                  readBy: { [user.uid]: serverTimestamp() },
+                  readBy: { [user.uid]: Timestamp.now() },
                 })
+                const sentAt = Timestamp.now()
                 const unreadPatch: Record<string, unknown> = {
-                  lastMessage: { text: t('cal.planPreview', { title }), senderId: user.uid, type: 'event', createdAt: serverTimestamp() },
-                  lastMessageAt: serverTimestamp(),
+                  lastMessage: { text: t('cal.planPreview', { title }), senderId: user.uid, type: 'event', createdAt: sentAt },
+                  lastMessageAt: sentAt,
                 }
                 for (const id2 of chat.memberIds) {
                   if (id2 !== user.uid) unreadPatch[`unread.${id2}`] = increment(1)

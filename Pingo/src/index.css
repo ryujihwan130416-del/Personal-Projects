@@ -2161,3 +2161,23 @@ html[data-theme="dark"] .cv-canvas { background-color: #15121f; background-image
 @media (min-width: 900px) and (prefers-reduced-motion: reduce) {
   .nav-rail, .nav-rail *, .nav-rail a { transition: none !important; }
 }
+
+/* Phones: the drifting backdrop, blur, and per-bubble glass were repainting the whole screen while scrolling and typing. */
+@media (hover: none), (pointer: coarse) {
+  .shell::before { animation: none; filter: none; }
+  .shell::after { display: none; }
+  .msg-row.theirs .bubble,
+  .msg-row.mine .bubble,
+  .chat .topbar.chat-top,
+  .topbar,
+  .composer,
+  .list-row,
+  .post-card, .cal-card, .game-tile, .set-card, .demo-box,
+  .nav-rail, .sidebar, .main {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .msg-row.theirs .bubble, .msg-row.mine .bubble {
+    box-shadow: calc(2px * var(--sh-k, 1)) calc(2px * var(--sh-k, 1)) 0 var(--border);
+  }
+}

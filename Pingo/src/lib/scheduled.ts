@@ -5,6 +5,7 @@ import { db, fsCol } from '../firebase/app'
 import type { UserProfile } from '../types'
 import { countMessage } from './activity'
 import { autoFlag } from './moderation'
+import { pingMembers } from './pushPing'
 
 /**
  * Scheduled messages live privately at users/{uid}/scheduled/{id}. With no server, they are delivered
@@ -50,19 +51,22 @@ export async function deliverScheduled(uid: string, profile: UserProfile, id: st
     if (!chat.exists()) { tx.delete(sref); return }
     const c = chat.data()
     const ttl = typeof c.disappearAfter === 'number' && c.disappearAfter > 0 ? c.disappearAfter : 0
+    const sentAt = Timestamp.now()
     tx.delete(sref)
     tx.set(doc(db, ...fsCol('chats', chatId, 'messages', id)), {
-      senderId: uid, text, type: 'text', photoURL: null, createdAt: serverTimestamp(), unsent: false, replyTo: null,
-      reactions: {}, readBy: { [uid]: serverTimestamp() }, scheduled: true,
+      senderId: uid, text, type: 'text', photoURL: null, createdAt: sentAt, unsent: false, replyTo: null,
+      reactions: {}, readBy: { [uid]: sentAt }, scheduled: true,
       ...(ttl ? { expiresAt: Timestamp.fromMillis(Date.now() + ttl * 1000) } : {}),
     })
     sent = { chatId, text, memberIds: (c.memberIds as string[]) ?? [] }
   })
   const done = sent as { chatId: string; text: string; memberIds: string[] } | null
   if (!done) return false
+  const sentAt = Timestamp.now()
+  pingMembers(uid, done.memberIds, id, { kind: 'msg', chatId: done.chatId, title: profile.displayName, body: done.text })
   const patch: Record<string, unknown> = {
-    lastMessage: { text: done.text, senderId: uid, type: 'text', createdAt: serverTimestamp() },
-    lastMessageAt: serverTimestamp(),
+    lastMessage: { text: done.text, senderId: uid, type: 'text', createdAt: sentAt },
+    lastMessageAt: sentAt,
     [`memberInfo.${uid}`]: { displayName: profile.displayName, username: profile.username, photoURL: profile.photoURL },
   }
   for (const m of done.memberIds) if (m !== uid) patch[`unread.${m}`] = increment(1)

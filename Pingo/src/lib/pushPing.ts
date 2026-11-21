@@ -22,6 +22,11 @@ async function hasAndroid(uid: string): Promise<boolean> {
   return on
 }
 
+/** Ask ahead of time, so the first message in a chat does not wait on a device lookup. */
+export function warmAndroid(uids: string[]) {
+  for (const uid of uids) void hasAndroid(uid)
+}
+
 /** Fire-and-forget: never blocks or fails a send. `id` is the dedupe key (message id / call id). */
 export function pingMembers(from: string, recipients: string[], id: string, p: Ping) {
   const clean = id.replace(/[.#$[\]/]/g, '_').slice(0, 70)

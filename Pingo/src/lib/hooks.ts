@@ -32,7 +32,8 @@ export function useTyping(chatId: string | undefined, myUid: string | undefined)
     if (!chatId) return
     return onValue(ref(rtdb, `dmly/typing/${chatId}`), (snap) => {
       const val = (snap.val() as Record<string, boolean> | null) ?? {}
-      setTypers(Object.keys(val).filter((id) => val[id] && id !== myUid))
+      const next = Object.keys(val).filter((id) => val[id] && id !== myUid)
+      setTypers((prev) => (prev.length === next.length && prev.every((id, i) => id === next[i]) ? prev : next))
     })
   }, [chatId, myUid])
   return typers

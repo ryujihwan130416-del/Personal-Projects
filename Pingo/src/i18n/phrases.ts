@@ -814,6 +814,7 @@ export const PHRASES: Record<string, Record<string, string>> = {
   "Sunshine": "阳光"
  },
  "ko": {
+  "Earlier messages": "이전 메시지",
   "Pingo is running so calls and messages reach you": "통화와 메시지를 받기 위해 Pingo가 실행 중이에요",
   "Someone": "누군가",
   "📹 {name} is video calling…": "📹 {name}님의 영상 통화…",

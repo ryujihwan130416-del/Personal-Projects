@@ -9,7 +9,13 @@ import {
   initializeAuth,
 } from 'firebase/auth'
 import { connectDatabaseEmulator, getDatabase } from 'firebase/database'
-import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
+import {
+  connectFirestoreEmulator,
+  initializeFirestore,
+  memoryLocalCache,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore'
 import { connectStorageEmulator, getStorage } from 'firebase/storage'
 import {
   emulatorHosts,
@@ -29,9 +35,18 @@ export const auth = initializeAuth(app, {
   persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence],
   popupRedirectResolver: browserPopupRedirectResolver,
 })
-export const db = firestoreDatabaseId
-  ? getFirestore(app, firestoreDatabaseId)
-  : getFirestore(app)
+// Disk cache so chats and new messages paint from this device immediately, then catch up with the server.
+function openFirestore() {
+  const id = firestoreDatabaseId || undefined
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    }, id)
+  } catch {
+    return initializeFirestore(app, { localCache: memoryLocalCache() }, id)
+  }
+}
+export const db = openFirestore()
 export const storage = getStorage(app)
 export const rtdb = getDatabase(app)
 

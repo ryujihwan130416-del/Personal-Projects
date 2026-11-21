@@ -8,6 +8,7 @@ import { IconEdit, IconSearch } from '../components/Icons'
 import { useAuth } from '../contexts/AuthContext'
 import { db, fsCol } from '../firebase/app'
 import { formatListTime } from '../lib/format'
+import { warmAndroid } from '../lib/pushPing'
 import { usePresenceMap, useTyping } from '../lib/hooks'
 import { otherMemberId } from '../lib/ids'
 import type { ChatDoc } from '../types'
@@ -71,8 +72,9 @@ export function previewText(chat: ChatDoc): string {
   return chat.lastMessage.text || t('inbox.message')
 }
 
-function TypingOr({ chatId, uid, children }: { chatId: string; uid: string; children: ReactNode }) {
-  const typers = useTyping(chatId, uid)
+function TypingOr({ chatId, uid, live, children }: { chatId: string; uid: string; live: boolean; children: ReactNode }) {
+  // One typing listener for the open chat. A listener on every row kept the inbox redrawing while anyone typed.
+  const typers = useTyping(live ? chatId : undefined, uid)
   return typers.length ? <p className="typing-preview"><span className="dots"><i /><i /><i /></span>{tx("typing…")}</p> : <>{children}</>
 }
 
@@ -129,6 +131,8 @@ export function InboxList({ mode }: { mode: 'inbox' | 'requests' | 'archived' })
   }, [inbox, archivedSet, pinnedSet, prefs.pinned])
   const list = mode === 'requests' ? incomingRequests : mode === 'archived' ? archivedList : mainList
   const peerIds = list.flatMap((c) => (c.type === 'dm' ? [otherMemberId(c.memberIds, uid) ?? ''] : [])).filter(Boolean)
+  const peerKey = peerIds.join(',')
+  useEffect(() => { if (peerKey) warmAndroid(peerKey.split(',')) }, [peerKey])
   const presence = usePresenceMap(peerIds)
 
   const currentChat = loc.pathname.startsWith('/chat/') ? loc.pathname.slice(6) : ''
@@ -190,7 +194,7 @@ export function InboxList({ mode }: { mode: 'inbox' | 'requests' | 'archived' })
                   <div className="time">{formatListTime(c.lastMessageAt?.toMillis())}</div>
                 </div>
                 <div className="preview">
-                  <TypingOr chatId={c.id} uid={uid}><p>{pendingOut ? `${t('inbox.requested')} · ${previewText(c)}` : shownPreview(c)}</p></TypingOr>
+                  <TypingOr chatId={c.id} uid={uid} live={currentChat === c.id}><p>{pendingOut ? `${t('inbox.requested')} · ${previewText(c)}` : shownPreview(c)}</p></TypingOr>
                   {unread > 0 ? <span className="unread-pill">{unread > 99 ? '99+' : unread}</span> : null}
                 </div>
               </div>
