@@ -61,7 +61,7 @@ export function AdminPage() {
   }
   return (
     <AdminContext.Provider value={ctx}>
-      <div className="screen admin" data-testid="admin-screen">
+      <div className={`screen admin${tab === 'lumen' ? ' lumen-full' : ''}`} data-testid="admin-screen">
         <div className="topbar admin-top">
           <button type="button" className="icon-btn" onClick={() => nav('/')} aria-label={at("Back to app")}><IconBack /></button>
           <h2><IconShield size={20} />{' '}{at("Admin console")}</h2>
@@ -80,7 +80,10 @@ export function AdminPage() {
         {err ? <p className="a-note bad">{err}</p> : null}
         <div className={`admin-body${tab === 'lumen' ? ' lumen' : ''}`} key={tab}>
           {tab === 'lumen' ? (
-            <iframe className="admin-lumen" title="Lumen" src="/lumen/index.html" data-testid="admin-lumen" />
+            <>
+              <iframe className="admin-lumen" title="Lumen" src="/lumen/index.html" data-testid="admin-lumen" />
+              <button type="button" className="admin-lumen-exit" onClick={() => go('ui')}>관리자</button>
+            </>
           ) : tab === 'dashboard' ? <Dashboard /> : tab === 'reports' ? <Reports /> : tab === 'flags' ? <Flags /> : tab === 'users' ? <Users /> : tab === 'chats' ? <Chats /> : tab === 'posts' ? <Posts /> : tab === 'announce' ? <Announce /> : tab === 'filter' ? <Filter /> : <UiEditor />}
         </div>
       </div>
