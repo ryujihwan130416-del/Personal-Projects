@@ -45,6 +45,11 @@ export function AdminPage() {
   }, [])
   // UI editor element overrides never apply to the admin console (their selectors exclude this route).
   useEffect(() => { document.documentElement.dataset.route = 'admin'; return () => { delete document.documentElement.dataset.route } }, [])
+  useEffect(() => {
+    if (tab === 'lumen') document.documentElement.dataset.lumen = '1'
+    else delete document.documentElement.dataset.lumen
+    return () => { delete document.documentElement.dataset.lumen }
+  }, [tab])
   useEffect(() => { if (admin) void reloadUsers() }, [admin, reloadUsers])
   useEffect(() => { const u = new URL(location.href); u.searchParams.set('tab', tab); history.replaceState(history.state, '', u) }, [tab])
 

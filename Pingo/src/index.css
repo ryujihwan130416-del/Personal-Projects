@@ -1370,6 +1370,8 @@ h3.section::before { content: ''; width: 6px; height: 18px; border-radius: calc(
 .screen.admin.lumen-full .admin-tabs { display: none; }
 .screen.admin.lumen-full .admin-body.lumen { position: fixed; inset: 0; z-index: 40; width: 100%; height: 100dvh; }
 .screen.admin.lumen-full .admin-lumen { width: 100%; height: 100%; }
+html[data-lumen] .tabbar,
+html[data-lumen] .nav-rail { display: none !important; }
 .a-card { border: 2px solid var(--border); border-radius: calc(22px * var(--rad-k, 1)); padding: calc(14px * var(--dens-k, 1)); background: var(--glass-strong); box-shadow: var(--lift-sm); min-width: 0; }
 .a-card > header, .a-words > header { display: flex; align-items: center; justify-content: space-between; gap: calc(8px * var(--dens-k, 1)); margin-bottom: 10px; }
 .a-card h3 { font-size: calc(16px * var(--fs-k, 1)); font-weight: 900; letter-spacing: -0.02em; }
