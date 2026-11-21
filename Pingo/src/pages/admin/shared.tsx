@@ -21,7 +21,7 @@ export interface AdminUser {
   mod?: ModerationDoc | null
 }
 
-export type Tab = 'dashboard' | 'reports' | 'flags' | 'users' | 'chats' | 'posts' | 'announce' | 'filter' | 'ui'
+export type Tab = 'dashboard' | 'reports' | 'flags' | 'users' | 'chats' | 'posts' | 'announce' | 'filter' | 'ui' | 'lumen'
 
 export interface AdminCtx {
   adminUid: string

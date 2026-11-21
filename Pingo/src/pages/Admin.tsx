@@ -26,6 +26,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'announce', label: 'Announcements', icon: '📣' },
   { id: 'filter', label: 'Word filter', icon: '🧹' },
   { id: 'ui', label: 'UI editor', icon: '🎨' },
+  { id: 'lumen', label: 'Lumen', icon: '✦' },
 ]
 
 export function AdminPage() {
@@ -77,8 +78,10 @@ export function AdminPage() {
           ))}
         </nav>
         {err ? <p className="a-note bad">{err}</p> : null}
-        <div className="admin-body" key={tab}>
-          {tab === 'dashboard' ? <Dashboard /> : tab === 'reports' ? <Reports /> : tab === 'flags' ? <Flags /> : tab === 'users' ? <Users /> : tab === 'chats' ? <Chats /> : tab === 'posts' ? <Posts /> : tab === 'announce' ? <Announce /> : tab === 'filter' ? <Filter /> : <UiEditor />}
+        <div className={`admin-body${tab === 'lumen' ? ' lumen' : ''}`} key={tab}>
+          {tab === 'lumen' ? (
+            <iframe className="admin-lumen" title="Lumen" src="/lumen/index.html" data-testid="admin-lumen" />
+          ) : tab === 'dashboard' ? <Dashboard /> : tab === 'reports' ? <Reports /> : tab === 'flags' ? <Flags /> : tab === 'users' ? <Users /> : tab === 'chats' ? <Chats /> : tab === 'posts' ? <Posts /> : tab === 'announce' ? <Announce /> : tab === 'filter' ? <Filter /> : <UiEditor />}
         </div>
       </div>
     </AdminContext.Provider>

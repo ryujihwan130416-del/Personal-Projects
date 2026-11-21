@@ -1364,6 +1364,8 @@ h3.section::before { content: ''; width: 6px; height: 18px; border-radius: calc(
 .admin-tab:hover { background: var(--bg-hover); }
 .admin-tab.on { background: var(--accent-grad); color: var(--on-accent); border-color: var(--border); box-shadow: calc(2px * var(--sh-k, 1)) calc(2px * var(--sh-k, 1)) 0 var(--border); }
 .admin-body { flex: 1; min-height: 0; overflow: auto; padding: 0 14px calc(14px + var(--safe-bot)); }
+.admin-body.lumen { display: flex; padding: 0; overflow: hidden; }
+.admin-lumen { flex: 1; width: 100%; min-height: 0; border: 0; background: #0b0c0f; }
 .a-card { border: 2px solid var(--border); border-radius: calc(22px * var(--rad-k, 1)); padding: calc(14px * var(--dens-k, 1)); background: var(--glass-strong); box-shadow: var(--lift-sm); min-width: 0; }
 .a-card > header, .a-words > header { display: flex; align-items: center; justify-content: space-between; gap: calc(8px * var(--dens-k, 1)); margin-bottom: 10px; }
 .a-card h3 { font-size: calc(16px * var(--fs-k, 1)); font-weight: 900; letter-spacing: -0.02em; }
