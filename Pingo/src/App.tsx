@@ -9,11 +9,16 @@ import { ConfirmHost } from './components/ConfirmDialog'
 import { AppShell, PublicOnly } from './layout/AppShell'
 import { LoginPage, SignupPage } from './pages/AuthPages'
 import { ChatPage } from './pages/Chat'
-import { ComposePage, FeedPage, PostDetailPage } from './pages/Feed'
-import { NewGroupPage } from './pages/NewGroup'
-import { EditProfilePage, MyProfilePage, UserProfilePage } from './pages/ProfilePages'
-import { SearchPage } from './pages/Search'
 import { UiEngine } from './lib/uiConfig'
+
+const FeedPage = lazy(() => import('./pages/Feed').then((m) => ({ default: m.FeedPage })))
+const ComposePage = lazy(() => import('./pages/Feed').then((m) => ({ default: m.ComposePage })))
+const PostDetailPage = lazy(() => import('./pages/Feed').then((m) => ({ default: m.PostDetailPage })))
+const NewGroupPage = lazy(() => import('./pages/NewGroup').then((m) => ({ default: m.NewGroupPage })))
+const MyProfilePage = lazy(() => import('./pages/ProfilePages').then((m) => ({ default: m.MyProfilePage })))
+const EditProfilePage = lazy(() => import('./pages/ProfilePages').then((m) => ({ default: m.EditProfilePage })))
+const UserProfilePage = lazy(() => import('./pages/ProfilePages').then((m) => ({ default: m.UserProfilePage })))
+const SearchPage = lazy(() => import('./pages/Search').then((m) => ({ default: m.SearchPage })))
 
 const UiPreviewPage = lazy(() => import('./pages/UiPreview').then((m) => ({ default: m.UiPreviewPage })))
 

@@ -98,12 +98,12 @@ export function useStoryGroups() {
   const [, setTick] = useState(0)
   useEffect(() => {
     if (!user) return
-    start(user.uid)
     const f = () => setTick((x) => x + 1)
     subs.add(f)
+    // The story query also re-reads every chat. Let the inbox paint first.
+    const kick = window.setTimeout(() => start(user.uid), 1500)
     const iv = window.setInterval(f, 60000)
-    f()
-    return () => { subs.delete(f); window.clearInterval(iv) }
+    return () => { subs.delete(f); window.clearTimeout(kick); window.clearInterval(iv) }
   }, [user])
   const uid = user?.uid ?? ''
   const now = Date.now()

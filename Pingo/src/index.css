@@ -2180,4 +2180,6 @@ html[data-theme="dark"] .cv-canvas { background-color: #15121f; background-image
   .msg-row.theirs .bubble, .msg-row.mine .bubble {
     box-shadow: calc(2px * var(--sh-k, 1)) calc(2px * var(--sh-k, 1)) 0 var(--border);
   }
+  .shell.detail .route-view { animation: none; }
+  .msg-row { content-visibility: auto; contain-intrinsic-size: auto 52px; }
 }

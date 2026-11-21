@@ -178,7 +178,7 @@ function MessageBubbleInner({
                     </button>
                   ) : null}
                   {msg.type === 'photo' && msg.photoURL ? (
-                    <img className="photo" src={msg.photoURL} alt="" loading="lazy" onClick={(e) => { e.stopPropagation(); onOpenPhoto?.(msg.photoURL!) }} />
+                    <img className="photo" src={msg.photoURL} alt="" loading="lazy" decoding="async" onClick={(e) => { e.stopPropagation(); onOpenPhoto?.(msg.photoURL!) }} />
                   ) : null}
                   {msg.type === 'file' && msg.fileURL ? (
                     <a className="file-card" href={msg.fileURL} download={msg.fileName || 'file'} onClick={(e) => e.stopPropagation()} data-testid="file-msg">

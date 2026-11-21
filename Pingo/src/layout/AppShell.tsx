@@ -6,7 +6,7 @@ import { IconLogo } from '../components/Icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useCall } from '../contexts/CallContext'
 import { db, fsCol } from '../firebase/app'
-import { InboxList } from '../pages/Inbox'
+import { InboxList, InboxWarm } from '../pages/Inbox'
 import type { ChatMemberInfo } from '../types'
 import { useLocale, useT } from '../i18n'
 import { EventReminders } from '../components/EventBits'
@@ -46,6 +46,7 @@ export function AppShell() {
   const t = useT()
   const { locale } = useLocale()
   const ui = useUiConfig()
+  const narrow = useNarrow()
   const shellClass = isChat ? 'detail' : isList ? 'list' : 'page-fill'
   // Feed & Profile use the slim sidebar (icon + label in a row); everything else the classic rail.
   const slimNav = /^\/(feed|post|compose|profile|u\/|settings)/.test(loc.pathname)
@@ -86,11 +87,11 @@ export function AppShell() {
         {tabs}
       </nav>
       <div className="shell-body">
-        {isChatsSection ? (
+        {isChatsSection && !(isChat && narrow) ? (
           <aside className="sidebar">
             <InboxList mode={mode} />
           </aside>
-        ) : null}
+        ) : isChatsSection ? <InboxWarm /> : null}
         <main className="main">
           {isList ? (
             <div className="main-empty" data-testid="desktop-empty">
@@ -104,16 +105,39 @@ export function AppShell() {
         </main>
       </div>
       <nav className="tabbar">{tabs}</nav>
-      <EventReminders />
       <PrefsSync />
       <ModerationGate />
-      <ScheduledRunner />
-      <StoryHost />
       <Alerts />
-      <AppSetupSheet />
+      <AfterPaint>
+        <EventReminders />
+        <ScheduledRunner />
+        <StoryHost />
+        <AppSetupSheet />
+      </AfterPaint>
       <CallOverlays />
     </div>
   )
+}
+
+function useNarrow() {
+  const [narrow, setNarrow] = useState(() => typeof matchMedia !== 'undefined' && matchMedia('(max-width: 899px)').matches)
+  useEffect(() => {
+    const mq = matchMedia('(max-width: 899px)')
+    const on = () => setNarrow(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return narrow
+}
+
+/** Listeners that are not needed for the first screen wait until the chat UI has painted. */
+function AfterPaint({ children }: { children: ReactNode }) {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    const id = window.setTimeout(() => setOn(true), 900)
+    return () => window.clearTimeout(id)
+  }, [])
+  return on ? children : null
 }
 
 function ScreenSkeleton() {

@@ -39,38 +39,12 @@ import { db, rtdb, fsCol } from '../firebase/app'
 import { MAX_FILE_BYTES, MAX_VOICE_MS, VoiceRecorder, fileToInline, uploadImage } from '../lib/media'
 import { formatDateDivider, formatLastActive, isSameDay } from '../lib/format'
 import { THEME_COLORS, usePresenceMap, useTyping } from '../lib/hooks'
-import type { ChatDoc, MessageDoc, ReplyPreview } from '../types'
+import type { ChatDoc, MessageDoc } from '../types'
+import { asMsg, cachedChat, cachedMessages, OPEN_PAGE, prefetchNow, rememberChat, rememberMessages, subscribeChatCache } from '../lib/chatCache'
 import { chatTitle } from './Inbox'
 import { useT } from '../i18n'
 import { GAMES } from '../games/catalog'
 import { EventForm } from '../components/EventForm'
-
-function asMsg(id: string, data: Record<string, unknown>): MessageDoc {
-  return {
-    id,
-    senderId: String(data.senderId ?? ''),
-    text: String(data.text ?? ''),
-    type: (data.type as MessageDoc['type']) ?? 'text',
-    photoURL: data.photoURL as string | undefined,
-    createdAt: (data.createdAt as MessageDoc['createdAt']) ?? null,
-    unsent: Boolean(data.unsent),
-    replyTo: data.replyTo as ReplyPreview | undefined,
-    reactions: data.reactions as MessageDoc['reactions'],
-    readBy: data.readBy as MessageDoc['readBy'],
-    gameId: data.gameId as string | undefined,
-    gameType: data.gameType as MessageDoc['gameType'],
-    eventId: data.eventId as string | undefined,
-    edited: Boolean(data.edited),
-    fileURL: data.fileURL as string | undefined,
-    fileName: data.fileName as string | undefined,
-    fileSize: data.fileSize as number | undefined,
-    fileType: data.fileType as string | undefined,
-    audioURL: data.audioURL as string | undefined,
-    duration: data.duration as number | undefined,
-    stickerId: data.stickerId as string | undefined,
-    expiresAt: (data.expiresAt as MessageDoc['expiresAt']) ?? null,
-  }
-}
 
 export const DISAPPEAR_OPTIONS: [number, string][] = [[0, 'Off'], [3600, '1 hour'], [86400, '24 hours'], [604800, '7 days']]
 // labels are translated where shown: tx(label)
@@ -198,8 +172,8 @@ export function ChatPage() {
   const nav = useNavigate()
   const toast = useToast()
   const t = useT()
-  const [chat, setChat] = useState<ChatDoc | null>(null)
-  const [messages, setMessages] = useState<MessageDoc[]>([])
+  const [chat, setChat] = useState<ChatDoc | null>(() => (chatId ? cachedChat(chatId) : null))
+  const [messages, setMessages] = useState<MessageDoc[]>(() => (chatId ? cachedMessages(chatId) ?? [] : []))
   const [text, setText] = useState('')
   const [replyTo, setReplyTo] = useState<MessageDoc | null>(null)
   const [menu, setMenu] = useState(false)
@@ -229,10 +203,19 @@ export function ChatPage() {
 
   useEffect(() => {
     if (!chatId) return
+    prefetchNow(chatId)
+    return subscribeChatCache(() => {
+      setChat((prev) => prev ?? cachedChat(chatId))
+      setMessages((prev) => (prev.length ? prev : cachedMessages(chatId) ?? prev))
+    })
+  }, [chatId])
+
+  useEffect(() => {
+    if (!chatId) return
     return onSnapshot(doc(db, ...fsCol('chats', chatId)), (snap) => {
       if (!snap.exists()) { setChat(null); return }
       const data = snap.data()
-      setChat({
+      const next = {
         id: snap.id,
         type: data.type,
         memberIds: data.memberIds,
@@ -248,19 +231,30 @@ export function ChatPage() {
         title: data.title,
         blockedUids: data.blockedUids,
         disappearAfter: typeof data.disappearAfter === 'number' ? data.disappearAfter : 0,
-      })
+      } as ChatDoc
+      rememberChat(next)
+      setChat(next)
     })
   }, [chatId])
 
-  const [msgWindow, setMsgWindow] = useState(80)
+  const [msgWindow, setMsgWindow] = useState(OPEN_PAGE)
   const [reachedStart, setReachedStart] = useState(false)
-  useEffect(() => { setMsgWindow(80); setReachedStart(false) }, [chatId])
+  const openedFor = useRef(chatId)
+  if (openedFor.current !== chatId) {
+    openedFor.current = chatId
+    setChat(chatId ? cachedChat(chatId) : null)
+    setMessages(chatId ? cachedMessages(chatId) ?? [] : [])
+    setMsgWindow(OPEN_PAGE)
+    setReachedStart(false)
+  }
   useEffect(() => {
     if (!chatId) return
-    // The newest page only. Loading the whole history on every keystroke was freezing the chat.
+    // The newest page only. The inbox has already cached it, so this paint does not wait on the network.
     const qy = query(collection(db, ...fsCol('chats', chatId, 'messages')), orderBy('createdAt', 'asc'), limitToLast(msgWindow))
     return onSnapshot(qy, (snap) => {
-      setMessages(snap.docs.map((d) => asMsg(d.id, d.data())))
+      const next = snap.docs.map((d) => asMsg(d.id, d.data()))
+      if (msgWindow === OPEN_PAGE) rememberMessages(chatId, next)
+      setMessages(next)
       setReachedStart(snap.docs.length < msgWindow)
     })
   }, [chatId, msgWindow])
@@ -302,7 +296,12 @@ export function ChatPage() {
     const first = !didInitialScroll.current && messages.length > 0
     if (messages.length > 0) didInitialScroll.current = true
     if (first || stickRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: first ? 'auto' : 'smooth', block: 'end' })
+      const scroller = listRef.current
+      if (first && scroller) {
+        scroller.scrollTop = scroller.scrollHeight
+        window.requestAnimationFrame(() => { scroller.scrollTop = scroller.scrollHeight })
+      }
+      else bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
       stickRef.current = true
     }
   }, [messages.length, typers.length])
@@ -310,13 +309,14 @@ export function ChatPage() {
   const unreadCount = chat?.unread?.[uid] ?? 0
   useEffect(() => {
     if (!chatId || !uid || unreadCount <= 0) return
-    void updateDoc(doc(db, ...fsCol('chats', chatId)), { [`unread.${uid}`]: 0 })
+    const id = window.setTimeout(() => { void updateDoc(doc(db, ...fsCol('chats', chatId)), { [`unread.${uid}`]: 0 }) }, 500)
+    return () => window.clearTimeout(id)
   }, [unreadCount, chatId, uid])
   useEffect(() => {
     if (!chatId || !uid) return
     const pending = messages.filter((m) => m.senderId !== uid && !m.readBy?.[uid] && m.createdAt && !marked.current.has(m.id)).slice(-40)
     if (!pending.length) return
-    const handle = window.setTimeout(() => {
+    const run = () => {
       const batch = writeBatch(db)
       const ids: string[] = []
       const seen = Timestamp.now()
@@ -331,8 +331,13 @@ export function ChatPage() {
         ids.forEach((id) => marked.current.delete(id))
         console.warn('read mark failed', err)
       })
-    }, 200)
-    return () => window.clearTimeout(handle)
+    }
+    const idle = window.requestIdleCallback?.(run, { timeout: 1200 })
+    const handle = idle === undefined ? window.setTimeout(run, 600) : 0
+    return () => {
+      if (idle !== undefined) window.cancelIdleCallback?.(idle)
+      if (handle) window.clearTimeout(handle)
+    }
   }, [messages, chatId, uid])
 
   const typingOn = useRef(false)
@@ -694,7 +699,17 @@ export function ChatPage() {
     }
   }
 
-  if (!chat) return <div className="screen"><div className="spinner" /></div>
+  if (!chat) {
+    return (
+      <div className="chat" data-testid="chat-screen">
+        <div className="topbar chat-top">
+          <button type="button" className="icon-btn" onClick={() => nav(-1)} aria-label={t('common.back')} data-testid="chat-back"><IconBack /></button>
+          <div className="chat-peer"><div className="who"><b>…</b></div></div>
+        </div>
+        <div className="messages" data-testid="messages" />
+      </div>
+    )
+  }
 
   return (
     <div className="chat" data-testid="chat-screen" style={{ ['--bubble-out' as string]: chat.themeColor || undefined }}>

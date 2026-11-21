@@ -15,6 +15,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocFromCache,
   onSnapshot,
   serverTimestamp,
   updateDoc,
@@ -96,6 +97,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return
     let got = false
     const ref0 = doc(db, ...fsCol('users', user.uid))
+    void getDocFromCache(ref0).then((snap) => {
+      if (got) return
+      const cached = mapProfile(user.uid, snap.data())
+      if (!cached) return
+      got = true
+      setProfile(cached)
+      setLoading(false)
+    }).catch(() => { /* first launch has nothing cached */ })
     const unsub = onSnapshot(ref0, (snap) => {
       got = true
       setProfile(mapProfile(user.uid, snap.data()))

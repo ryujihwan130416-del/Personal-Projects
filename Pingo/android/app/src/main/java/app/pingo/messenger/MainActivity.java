@@ -3,6 +3,7 @@ package app.pingo.messenger;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
@@ -18,7 +19,10 @@ public class MainActivity extends BridgeActivity {
         handleCallIntent(getIntent());
         // Keep the WebView renderer at high priority so JS listeners keep running in the background.
         WebView wv = getBridge() != null ? getBridge().getWebView() : null;
-        if (wv != null && Build.VERSION.SDK_INT >= 26) wv.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
+        if (wv != null) {
+            wv.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            if (Build.VERSION.SDK_INT >= 26) wv.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
+        }
     }
 
     @Override

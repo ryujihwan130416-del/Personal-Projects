@@ -7,6 +7,7 @@ import { useChatFilter } from '../lib/chatFilter'
 import { IconEdit, IconSearch } from '../components/Icons'
 import { useAuth } from '../contexts/AuthContext'
 import { db, fsCol } from '../firebase/app'
+import { cachedChatList, prefetchChats, prefetchNow, rememberChats } from '../lib/chatCache'
 import { formatListTime } from '../lib/format'
 import { warmAndroid } from '../lib/pushPing'
 import { usePresenceMap, useTyping } from '../lib/hooks'
@@ -39,19 +40,27 @@ export function asChat(id: string, data: Record<string, unknown>): ChatDoc {
 
 export function useMyChats() {
   const { user } = useAuth()
-  const [chats, setChats] = useState<ChatDoc[]>([])
-  const [ready, setReady] = useState(false)
+  const [chats, setChats] = useState<ChatDoc[]>(cachedChatList)
+  const [ready, setReady] = useState(() => cachedChatList().length > 0)
   useEffect(() => {
     if (!user) return
     const q = query(collection(db, ...fsCol('chats')), where('memberIds', 'array-contains', user.uid))
     return onSnapshot(q, (snap) => {
       const list = snap.docs.map((d) => asChat(d.id, d.data()))
       list.sort((a, b) => (b.lastMessageAt?.toMillis() ?? 0) - (a.lastMessageAt?.toMillis() ?? 0))
+      rememberChats(list)
+      prefetchChats(list.slice(0, 6).map((c) => c.id))
       setChats(list)
       setReady(true)
     }, () => setReady(true))
   }, [user])
   return { chats, ready }
+}
+
+/** Keeps the chat list cached while the visible list is unmounted (a phone chat covers it). */
+export function InboxWarm() {
+  useMyChats()
+  return null
 }
 
 export function chatTitle(chat: ChatDoc, uid: string): { name: string; photo?: string; username?: string; peerId?: string } {
@@ -178,7 +187,8 @@ export function InboxList({ mode }: { mode: 'inbox' | 'requests' | 'archived' })
           const pendingOut = c.requestStatus === 'pending' && c.requestFrom === uid
           return (
             <div key={c.id} className={`list-row-wrap ${menuFor === c.id ? 'menu-open' : ''}`} onContextMenu={(e) => { if (mode === 'requests') return; e.preventDefault(); setMenuFor(c.id) }}
-              onTouchStart={() => { if (mode === 'requests') return; window.clearTimeout(pressRef.current); pressRef.current = window.setTimeout(() => { setMenuFor(c.id); navigator.vibrate?.(10) }, 520) }}
+              onTouchStart={() => { prefetchNow(c.id); if (mode === 'requests') return; window.clearTimeout(pressRef.current); pressRef.current = window.setTimeout(() => { setMenuFor(c.id); navigator.vibrate?.(10) }, 520) }}
+              onMouseDown={() => prefetchNow(c.id)}
               onTouchEnd={(e) => { if (menuFor === c.id) e.preventDefault(); window.clearTimeout(pressRef.current) }}
               onTouchMove={() => window.clearTimeout(pressRef.current)}>
             <button
