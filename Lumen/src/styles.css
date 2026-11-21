@@ -462,6 +462,15 @@ a.primary { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .load-more .primary { min-width: 160px; }
 
+.recommend { margin-top: 28px; }
+.recommend h2 {
+  margin: 0;
+  font-family: Syne, sans-serif;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+}
+.recommend > p { margin: 4px 0 14px; color: var(--muted); }
+
 .graph-app {
   position: relative;
   z-index: 2;

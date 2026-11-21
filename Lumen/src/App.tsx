@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { YouTubeError, fetchCategories, searchYouTube } from './api'
 import { searchDemo } from './demo'
+import { rememberSearch, readSearchCount, readSearchHistory, recommendationQuery, RECOMMEND_AFTER } from './history'
 import { CATEGORIES, SUGGESTIONS } from './options'
 import { DEFAULT_FILTERS, activeChips, hasSearchTarget, searchRoute } from './query'
 import { hasStoredApiKey, readApiKey, writeApiKey } from './storage'
@@ -61,6 +62,13 @@ export function App() {
   const [keyOpen, setKeyOpen] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [showLoadMore, setShowLoadMore] = useState(false)
+  const [searchCount, setSearchCount] = useState(readSearchCount)
+  const [searchHistory, setSearchHistory] = useState(readSearchHistory)
+  const [recommended, setRecommended] = useState<VideoResult[]>([])
+  const [recommendToken, setRecommendToken] = useState<string | undefined>()
+  const [recommendLoading, setRecommendLoading] = useState(false)
+  const [showRecommendMore, setShowRecommendMore] = useState(false)
+  const recommendMoreRef = useRef<HTMLDivElement>(null)
   const [screen, setScreen] = useState<'graph' | 'search'>('graph')
   const streamRef = useRef<HTMLDivElement>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
@@ -188,10 +196,15 @@ export function App() {
     })
   }
 
-  function issue(next: Filters, pageToken?: string, options?: { closeFilters?: boolean; preserveDraft?: boolean }) {
+  function issue(next: Filters, pageToken?: string, options?: { closeFilters?: boolean; preserveDraft?: boolean; countSearch?: boolean }) {
     if (!options?.preserveDraft) {
       setFilters(next)
       setChannelDraft(next.channelId)
+    }
+    if (options?.countSearch && next.q.trim()) {
+      const saved = rememberSearch(next.q)
+      setSearchCount(saved.count)
+      setSearchHistory(saved.history)
     }
     setNotice(null)
     setJob((current) => ({
@@ -266,6 +279,90 @@ export function App() {
   const resultLabel = page
     ? `${sampleMode ? '샘플 · ' : ''}${formatCount(page.totalResults)} ${resultNoun}${page.totalResults === 1 ? '' : 's'}`
     : ''
+  const recommendQuery = recommendationQuery(searchHistory, applied?.q ?? '')
+  const visibleRecommendations = recommended.filter(
+    (video) => !page?.results.some((shown) => shown.id === video.id),
+  )
+
+  useEffect(() => {
+    if (searchCount < RECOMMEND_AFTER || !recommendQuery || route === 'needs-key') {
+      setRecommended([])
+      setRecommendToken(undefined)
+      return
+    }
+    const onlyOneTopic = new Set(searchHistory.map((item) => item.trim().toLowerCase())).size < 2
+    const recommendFilters = {
+      ...DEFAULT_FILTERS,
+      q: recommendQuery,
+      maxResults: 12,
+      order: onlyOneTopic ? ('viewCount' as const) : ('relevance' as const),
+      keywordOnly: true,
+    }
+    let ignore = false
+    const request =
+      route === 'live' && apiKey
+        ? searchYouTube(apiKey, recommendFilters, undefined)
+        : Promise.resolve(searchDemo(recommendFilters, undefined, new Date()))
+    request
+      .then((nextPage) => {
+        if (ignore) return
+        setRecommended(nextPage.results)
+        setRecommendToken(nextPage.nextPageToken)
+      })
+      .catch(() => {
+        if (ignore) return
+        setRecommended([])
+        setRecommendToken(undefined)
+      })
+    return () => {
+      ignore = true
+    }
+  }, [searchCount, searchHistory, recommendQuery, route, apiKey])
+
+  useEffect(() => {
+    const root = streamRef.current
+    const node = recommendMoreRef.current
+    if (!root || !node || !recommendToken) {
+      setShowRecommendMore(false)
+      return
+    }
+    const observer = new IntersectionObserver(([entry]) => setShowRecommendMore(entry.isIntersecting), {
+      root,
+      threshold: 0.4,
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [recommendToken, visibleRecommendations.length, screen])
+
+  function loadMoreRecommendations() {
+    if (!recommendQuery || !recommendToken || recommendLoading || route === 'needs-key') return
+    const onlyOneTopic = new Set(searchHistory.map((item) => item.trim().toLowerCase())).size < 2
+    const recommendFilters = {
+      ...DEFAULT_FILTERS,
+      q: recommendQuery,
+      maxResults: 12,
+      order: onlyOneTopic ? ('viewCount' as const) : ('relevance' as const),
+      keywordOnly: true,
+    }
+    const token = recommendToken
+    setRecommendLoading(true)
+    const request =
+      route === 'live' && apiKey
+        ? searchYouTube(apiKey, recommendFilters, token)
+        : Promise.resolve(searchDemo(recommendFilters, token, new Date()))
+    request
+      .then((nextPage) => {
+        setRecommended((current) => {
+          const seen = new Set(current.map((video) => video.id))
+          return [...current, ...nextPage.results.filter((video) => !seen.has(video.id))]
+        })
+        setRecommendToken(nextPage.nextPageToken)
+      })
+      .catch(() => {
+        setRecommendToken(undefined)
+      })
+      .finally(() => setRecommendLoading(false))
+  }
 
   if (screen === 'graph') {
     return <GraphPad onOpenSearch={() => setScreen('search')} />
@@ -345,10 +442,10 @@ export function App() {
                 </h2>
                 <p className="lede">
                   {sampleMode
-                    ? '샘플 목록에서만 찾습니다. 유튜브에 있는 영상을 보려면 Live를 고르고 YouTube Data API 키를 넣으세요.'
+                    ? '샘플 목록에서만 찾습니다. 세 번 검색하면 그 검색을 바탕으로 추천 영상이 자동으로 나옵니다.'
                     : !apiKey
                       ? `${KEY_REQUIRED} 키를 넣은 뒤 검색하면, 검색어가 들어간 영상부터 보여주고 Load More로 다음 페이지만 불러옵니다.`
-                      : '검색어가 들어간 영상부터 보여 줍니다. 맨 아래까지 내리면 Load More로 다음 페이지만 이어서 불러옵니다.'}
+                      : '검색어가 들어간 영상부터 보여 줍니다. 세 번 검색하면 추천 영상이 자동으로 따라옵니다.'}
                 </p>
               </section>
             ) : null}
@@ -369,7 +466,7 @@ export function App() {
                   setNotice('Enter a search, a channel, or choose a broadcast.')
                   return
                 }
-                issue(next, undefined, { closeFilters: true })
+                issue(next, undefined, { closeFilters: true, countSearch: true })
               }}
             >
               <div className="search">
@@ -407,6 +504,7 @@ export function App() {
                   onClick={() =>
                     issue({ ...filters, q: term, channelId: channelDraft, keywordOnly: false }, undefined, {
                       closeFilters: true,
+                      countSearch: true,
                     })
                   }
                 >
@@ -414,6 +512,20 @@ export function App() {
                 </button>
               ))}
             </div>
+
+            {visibleRecommendations.length > 0 ? (
+              <RecommendRow
+                videos={visibleRecommendations}
+                categories={categories}
+                selectedId={selected?.id ?? null}
+                onSelect={setSelected}
+                moreRef={recommendMoreRef}
+                showMore={showRecommendMore && Boolean(recommendToken)}
+                hasMore={Boolean(recommendToken)}
+                loadingMore={recommendLoading}
+                onLoadMore={loadMoreRecommendations}
+              />
+            ) : null}
 
             {notice ? (
               <p className="notice" role="status">
@@ -501,6 +613,58 @@ export function App() {
         onSave={saveKey}
       />
     </div>
+  )
+}
+
+function RecommendRow({
+  videos,
+  categories,
+  selectedId,
+  onSelect,
+  moreRef,
+  showMore,
+  hasMore,
+  loadingMore,
+  onLoadMore,
+}: {
+  videos: VideoResult[]
+  categories: CategoryOption[]
+  selectedId: string | null
+  onSelect: (video: VideoResult) => void
+  moreRef: RefObject<HTMLDivElement | null>
+  showMore: boolean
+  hasMore: boolean
+  loadingMore: boolean
+  onLoadMore: () => void
+}) {
+  return (
+    <section className="recommend" aria-label="추천 영상">
+      <h2>추천 영상</h2>
+      <p>세 번 이상 검색해서, 지금까지 찾은 주제로 골랐습니다.</p>
+      <div className="grid">
+        {videos.map((video) => (
+          <VideoCard
+            key={video.id}
+            video={video}
+            categories={categories}
+            selected={video.id === selectedId}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+      {hasMore ? (
+        <div className="load-more" ref={moreRef}>
+          {showMore ? (
+            <>
+              <button type="button" className="primary" onClick={onLoadMore} disabled={loadingMore}>
+                {loadingMore ? 'Loading…' : 'Load More'}
+              </button>
+              <p className="hint">추천도 한 페이지씩만 불러옵니다.</p>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   )
 }
 
