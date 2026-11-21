@@ -1,0 +1,12 @@
+{
+  "name": "Pingo",
+  "short_name": "Pingo",
+  "description": "Chat, feed, and minigames.",
+  "display": "standalone",
+  "start_url": "/",
+  "background_color": "#fff3d6",
+  "theme_color": "#fff3d6",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

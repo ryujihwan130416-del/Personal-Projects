@@ -1,0 +1,46 @@
+{
+  "name": "dmly",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "oxlint",
+    "emulators": "firebase emulators:start --project demo-dmapp --only auth,firestore,database,storage",
+    "seed": "node scripts/seed.mjs",
+    "demo": "concurrently -k -n turn,emu,web -c green,cyan,magenta \"npm run turn\" \"npm run emulators\" \"wait-on tcp:127.0.0.1:8080 tcp:127.0.0.1:9099 tcp:127.0.0.1:9000 tcp:127.0.0.1:9199 && npm run seed && npm run dev\"",
+    "test:e2e": "node tests/e2e.mjs",
+    "turn": "turnserver -c turnserver.conf --log-file stdout --pidfile /tmp/dmly-turn.pid --simple-log",
+    "build:prod": "VITE_USE_EMULATORS=false tsc -b && VITE_USE_EMULATORS=false vite build"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/local-notifications": "^8.3.1",
+    "firebase": "^13.4.0",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.6"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
+    "@types/node": "^24.19.2",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.7",
+    "firebase-admin": "^14.5.1",
+    "firebase-tools": "^15.37.0",
+    "oxlint": "^1.90.0",
+    "playwright": "^1.65.1",
+    "tsx": "^4.23.15",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.6",
+    "wait-on": "^9.5.1"
+  }
+}

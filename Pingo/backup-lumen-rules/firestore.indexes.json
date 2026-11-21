@@ -1,0 +1,59 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "racers",
+      "fieldPath": "cfg",
+      "ttl": false,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "racers",
+      "fieldPath": "fx",
+      "ttl": false,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "racers",
+      "fieldPath": "s",
+      "ttl": false,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "racers",
+      "fieldPath": "sp",
+      "ttl": false,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "racers",
+      "fieldPath": "t",
+      "ttl": false,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "racers",
+      "fieldPath": "x",
+      "ttl": false,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "racers",
+      "fieldPath": "y",
+      "ttl": false,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "racers",
+      "fieldPath": "yaw",
+      "ttl": false,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "racers",
+      "fieldPath": "z",
+      "ttl": false,
+      "indexes": []
+    }
+  ]
+}

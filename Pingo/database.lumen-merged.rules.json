@@ -1,0 +1,496 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "dmly": {
+      "presence": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.hasChildren(['state', 'lastActive']) && newData.child('state').isString() && newData.child('lastActive').isNumber()"
+        }
+      },
+      "typing": {
+        "$chatId": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      },
+      "draw": {
+        "$roomId": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      },
+      "snake": {
+        "$roomId": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      },
+      "devices": {
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "!newData.exists() || (newData.hasChildren(['android','at']) && newData.child('android').isBoolean() && newData.child('at').isNumber())"
+        }
+      },
+      "notify": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid && !newData.exists()",
+          "$id": {
+            ".write": "auth != null && ((!data.exists() && newData.exists() && newData.child('from').val() === auth.uid) || (!newData.exists() && (auth.uid === $uid || data.child('from').val() === auth.uid)))",
+            ".validate": "newData.hasChildren(['from','kind','chatId','title','at']) && newData.child('kind').isString() && newData.child('kind').val().matches(/^(msg|call|call-end)$/) && newData.child('chatId').isString() && newData.child('chatId').val().length < 80 && newData.child('title').isString() && newData.child('title').val().length <= 120 && (!newData.child('body').exists() || (newData.child('body').isString() && newData.child('body').val().length <= 300)) && newData.child('at').isNumber() && newData.child('at').val() <= now + 60000 && $id.length < 80"
+          }
+        }
+      }
+    },
+    "turboRacer": {
+      "lobbies": {
+        ".read": "auth != null",
+        ".indexOn": [
+          "updatedAt"
+        ],
+        "$code": {
+          ".write": "auth != null && (root.child('turboRacer/rooms/' + $code + '/racers/' + auth.uid).exists() || newData.parent().parent().child('rooms/' + $code + '/racers/' + auth.uid).exists() || (!newData.exists() && !root.child('turboRacer/rooms/' + $code + '/racers').exists()))",
+          ".validate": "$code.matches(/^[A-Z2-9]{5}$/) && newData.hasChildren(['track', 'laps', 'hostName', 'n', 'updatedAt'])",
+          "track": {
+            ".validate": "newData.val() == 'classic' || newData.val() == 'canyon' || newData.val() == 'city' || newData.val() == 'snow' || newData.val() == 'rain'"
+          },
+          "laps": {
+            ".validate": "newData.val() == 1 || newData.val() == 2 || newData.val() == 3 || newData.val() == 5"
+          },
+          "hostName": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "n": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8"
+          },
+          "updatedAt": {
+            ".validate": "newData.val() == now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "rooms": {
+        "$code": {
+          ".read": "auth != null",
+          ".write": "auth != null && !newData.exists() && !data.child('racers').exists()",
+          ".validate": "$code.matches(/^[A-Z2-9]{5}$/)",
+          "meta": {
+            ".write": "auth != null && newData.exists() && newData.parent().child('racers/' + auth.uid).exists() && (!data.exists() || data.parent().child('racers/' + auth.uid).exists() || !data.parent().child('racers').exists())",
+            ".validate": "newData.hasChildren(['host', 'hostName', 'track', 'laps', 'pub', 'status', 'startAt', 'round', 'n', 'createdAt', 'updatedAt'])",
+            "host": {
+              ".validate": "newData.isString() && newData.val().length <= 128 && (newData.val() == data.val() || newData.val() == auth.uid || newData.parent().parent().child('racers/' + newData.val()).exists())"
+            },
+            "hostName": {
+              ".validate": "newData.isString() && newData.val().length <= 20"
+            },
+            "track": {
+              ".validate": "newData.val() == 'classic' || newData.val() == 'canyon' || newData.val() == 'city' || newData.val() == 'snow' || newData.val() == 'rain'"
+            },
+            "laps": {
+              ".validate": "newData.val() == 1 || newData.val() == 2 || newData.val() == 3 || newData.val() == 5"
+            },
+            "pub": {
+              ".validate": "newData.isBoolean()"
+            },
+            "status": {
+              ".validate": "newData.val() == 'lobby' || newData.val() == 'race' || newData.val() == 'done'"
+            },
+            "round": {
+              ".validate": "newData.isNumber() && ((!data.exists() && newData.val() == 0) || newData.val() == data.val() || (newData.val() == data.val() + 1 && newData.parent().child('status').val() == 'race'))"
+            },
+            "startAt": {
+              ".validate": "newData.isNumber() && (newData.val() == data.val() || newData.val() == 0 || (newData.val() > now + 1000 && newData.val() < now + 60000 && newData.parent().child('round').val() == data.parent().child('round').val() + 1))"
+            },
+            "n": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8"
+            },
+            "createdAt": {
+              ".validate": "(!data.exists() && newData.val() == now) || newData.val() == data.val()"
+            },
+            "updatedAt": {
+              ".validate": "newData.val() == now"
+            },
+            "grid": {
+              "$i": {
+                ".validate": "$i.matches(/^[0-7]$/) && newData.isString() && newData.val().length <= 128"
+              }
+            },
+            "results": {
+              "$i": {
+                ".validate": "$i.matches(/^[0-7]$/) && newData.hasChildren(['uid', 'name', 'place'])",
+                "uid": {
+                  ".validate": "newData.isString() && newData.val().length <= 128"
+                },
+                "name": {
+                  ".validate": "newData.isString() && newData.val().length <= 20"
+                },
+                "place": {
+                  ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 8"
+                },
+                "time": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "racers": {
+            "$uid": {
+              ".write": "auth != null && auth.uid == $uid",
+              ".validate": "newData.hasChildren(['name', 'cfg', 'round', 'x', 'y', 'z', 'yaw', 'sp', 's', 'lap', 'fin', 'fx', 'ct', 't', 'joinedAt']) && (data.exists() || newData.parent().parent().child('meta/status').val() != 'race')",
+              "name": {
+                ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/) && auth.token.email == newData.val() + '@turboracer.game'"
+              },
+              "cfg": {
+                ".validate": "newData.hasChildren(['car', 'paint', 'rim', 'spoiler', 'stripe', 'glow'])",
+                "car": {
+                  ".validate": "newData.val() == 'gt' || newData.val() == 'pebble'"
+                },
+                "paint": {
+                  ".validate": "newData.isString() && newData.val().matches(/^(blue|red|yellow|green|orange|purple|white|black)$/)"
+                },
+                "rim": {
+                  ".validate": "newData.isString() && newData.val().matches(/^(silver|black|gold|neon)$/)"
+                },
+                "spoiler": {
+                  ".validate": "newData.isString() && newData.val().matches(/^(none|duck|wing|rally)$/)"
+                },
+                "stripe": {
+                  ".validate": "newData.isString() && newData.val().matches(/^(none|racing|side|number)$/)"
+                },
+                "glow": {
+                  ".validate": "newData.isString() && newData.val().matches(/^(none|cyan|pink|lime|violet)$/)"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              },
+              "round": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 100000"
+              },
+              "x": {
+                ".validate": "newData.isNumber() && newData.val() > -100000 && newData.val() < 100000"
+              },
+              "y": {
+                ".validate": "newData.isNumber() && newData.val() > -100000 && newData.val() < 100000"
+              },
+              "z": {
+                ".validate": "newData.isNumber() && newData.val() > -100000 && newData.val() < 100000"
+              },
+              "yaw": {
+                ".validate": "newData.isNumber() && newData.val() > -100 && newData.val() < 100"
+              },
+              "sp": {
+                ".validate": "newData.isNumber() && newData.val() > -1000 && newData.val() < 1000"
+              },
+              "s": {
+                ".validate": "newData.isNumber() && newData.val() > -100000 && newData.val() < 100000"
+              },
+              "lap": {
+                ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 10"
+              },
+              "fin": {
+                ".validate": "newData.isBoolean()"
+              },
+              "ft": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400"
+              },
+              "fx": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 15"
+              },
+              "ct": {
+                ".validate": "newData.isNumber()"
+              },
+              "t": {
+                ".validate": "newData.val() == now"
+              },
+              "joinedAt": {
+                ".validate": "(!data.exists() && newData.val() == now) || newData.val() == data.val()"
+              },
+              "$other": {
+                ".validate": false
+              },
+              "lc": {
+                ".validate": "newData.val() == now && (!data.exists() || now - data.val() >= 1500)"
+              }
+            }
+          },
+          "$other": {
+            ".validate": false
+          },
+          "chat": {
+            "$id": {
+              ".write": "auth != null && !data.exists() && newData.exists() && root.child('turboRacer/rooms/' + $code + '/racers/' + auth.uid).exists()",
+              ".validate": "$id.length <= 24 && newData.hasChildren(['u', 'n', 't']) && (newData.hasChild('m') || newData.hasChild('e')) && newData.parent().parent().child('racers/' + auth.uid + '/lc').val() == now",
+              "u": {
+                ".validate": "newData.val() == auth.uid"
+              },
+              "n": {
+                ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/) && auth.token.email == newData.val() + '@turboracer.game'"
+              },
+              "m": {
+                ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 80"
+              },
+              "e": {
+                ".validate": "newData.isString() && newData.val().matches(/^(gg|wave|fire|laugh|wow|thumbs|cry|flag)$/)"
+              },
+              "t": {
+                ".validate": "newData.val() == now"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "boxes": {
+            "$i": {
+              ".write": "auth != null && root.child('turboRacer/rooms/' + $code + '/racers/' + auth.uid).exists()",
+              ".validate": "$i.matches(/^[0-9]{1,2}$/) && newData.hasChildren(['t', 'r', 'by']) && (!data.exists() || data.child('t').val() <= now + 500 || data.child('r').val() != newData.child('r').val())",
+              "t": {
+                ".validate": "newData.isNumber() && newData.val() > now && newData.val() < now + 10000"
+              },
+              "r": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 100000"
+              },
+              "by": {
+                ".validate": "newData.val() == auth.uid"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "ev": {
+            ".indexOn": [
+              "t"
+            ],
+            "$id": {
+              ".write": "auth != null && !data.exists() && newData.exists() && root.child('turboRacer/rooms/' + $code + '/racers/' + auth.uid).exists()",
+              ".validate": "$id.length <= 32 && newData.hasChildren(['u', 'k', 'r', 't'])",
+              "u": {
+                ".validate": "newData.val() == auth.uid"
+              },
+              "k": {
+                ".validate": "newData.isString() && newData.val().matches(/^(banana|missile|pop)$/)"
+              },
+              "r": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 100000"
+              },
+              "t": {
+                ".validate": "newData.val() == now"
+              },
+              "x": {
+                ".validate": "newData.isNumber() && newData.val() > -100000 && newData.val() < 100000"
+              },
+              "y": {
+                ".validate": "newData.isNumber() && newData.val() > -100000 && newData.val() < 100000"
+              },
+              "z": {
+                ".validate": "newData.isNumber() && newData.val() > -100000 && newData.val() < 100000"
+              },
+              "tgt": {
+                ".validate": "newData.isString() && newData.val().length <= 128"
+              },
+              "ref": {
+                ".validate": "newData.isString() && newData.val().length <= 32"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        }
+      },
+      "names": {
+        "$name": {
+          ".read": "auth != null",
+          ".write": "auth != null && ((!data.exists() && newData.val() == auth.uid && auth.token.email == $name + '@turboracer.game') || (!newData.exists() && data.val() == auth.uid))",
+          ".validate": "newData.isString()"
+        }
+      },
+      "status": {
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.hasChildren(['n', 'on', 'at'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/) && auth.token.email == newData.val() + '@turboracer.game'"
+          },
+          "on": {
+            ".validate": "newData.isBoolean()"
+          },
+          "room": {
+            ".validate": "newData.isString() && newData.val().matches(/^([A-Z2-9]{5})?$/)"
+          },
+          "at": {
+            ".validate": "newData.val() == now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "friends": {
+        "$uid": {
+          ".read": "auth != null && auth.uid == $uid",
+          "$fid": {
+            ".write": "auth != null && (auth.uid == $uid || ($fid == auth.uid && (!newData.exists() || root.child('turboRacer/requests/' + auth.uid + '/' + $uid).exists())))",
+            ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/) && ($fid != auth.uid || auth.token.email == newData.val() + '@turboracer.game') && $fid != $uid"
+          }
+        }
+      },
+      "requests": {
+        "$to": {
+          ".read": "auth != null && auth.uid == $to",
+          "$from": {
+            ".write": "auth != null && (auth.uid == $from || (auth.uid == $to && !newData.exists()))",
+            ".validate": "newData.hasChildren(['n', 'at']) && $from != $to",
+            "n": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/) && auth.token.email == newData.val() + '@turboracer.game'"
+            },
+            "at": {
+              ".validate": "newData.val() == now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      },
+      "invites": {
+        "$to": {
+          ".read": "auth != null && auth.uid == $to",
+          "$from": {
+            ".write": "auth != null && ((auth.uid == $from && (!newData.exists() || root.child('turboRacer/friends/' + $to + '/' + $from).exists())) || (auth.uid == $to && !newData.exists()))",
+            ".validate": "newData.hasChildren(['n', 'code', 'at'])",
+            "n": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/) && auth.token.email == newData.val() + '@turboracer.game'"
+            },
+            "code": {
+              ".validate": "newData.isString() && newData.val().matches(/^[A-Z2-9]{5}$/)"
+            },
+            "at": {
+              ".validate": "newData.val() == now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      },
+      "lb": {
+        "$track": {
+          ".read": "auth != null",
+          ".indexOn": [
+            "lap",
+            "race"
+          ],
+          ".validate": "($track == 'classic' || $track == 'canyon' || $track == 'city' || $track == 'snow' || $track == 'rain')",
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.hasChildren(['n', 'at']) && (newData.hasChild('lap') || newData.hasChild('race'))",
+            "n": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/) && auth.token.email == newData.val() + '@turboracer.game'"
+            },
+            "lap": {
+              ".validate": "newData.isNumber() && newData.val() >= 15 && newData.val() <= 3600 && (!data.exists() || newData.val() <= data.val())"
+            },
+            "race": {
+              ".validate": "newData.isNumber() && newData.val() >= 45 && newData.val() <= 7200 && (!data.exists() || newData.val() <= data.val())"
+            },
+            "at": {
+              ".validate": "newData.val() == now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      },
+      "ghosts": {
+        "$track": {
+          ".validate": "($track == 'classic' || $track == 'canyon' || $track == 'city' || $track == 'snow' || $track == 'rain')",
+          "$uid": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.hasChildren(['n', 't', 'd', 'cfg']) && newData.child('t').val() == newData.parent().parent().parent().child('lb/' + $track + '/' + $uid + '/lap').val()",
+            "n": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/) && auth.token.email == newData.val() + '@turboracer.game'"
+            },
+            "t": {
+              ".validate": "newData.isNumber()"
+            },
+            "d": {
+              ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 60000"
+            },
+            "cfg": {
+              ".validate": "newData.hasChildren(['car', 'paint', 'rim', 'spoiler', 'stripe', 'glow'])",
+              "car": {
+                ".validate": "newData.val() == 'gt' || newData.val() == 'pebble'"
+              },
+              "paint": {
+                ".validate": "newData.isString() && newData.val().matches(/^(blue|red|yellow|green|orange|purple|white|black)$/)"
+              },
+              "rim": {
+                ".validate": "newData.isString() && newData.val().matches(/^(silver|black|gold|neon)$/)"
+              },
+              "spoiler": {
+                ".validate": "newData.isString() && newData.val().matches(/^(none|duck|wing|rally)$/)"
+              },
+              "stripe": {
+                ".validate": "newData.isString() && newData.val().matches(/^(none|racing|side|number)$/)"
+              },
+              "glow": {
+                ".validate": "newData.isString() && newData.val().matches(/^(none|cyan|pink|lime|violet)$/)"
+              },
+              "$other": {
+                ".validate": false
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      },
+      "season": {
+        "$sid": {
+          ".read": "auth != null",
+          ".indexOn": [
+            "rp"
+          ],
+          ".validate": "$sid.matches(/^20[0-9][0-9]-[01][0-9]$/)",
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.hasChildren(['n', 'rp', 'at'])",
+            "n": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/) && auth.token.email == newData.val() + '@turboracer.game'"
+            },
+            "rp": {
+              ".validate": "newData.isNumber() && ((!data.exists() && newData.val() > 0 && newData.val() <= 25) || (data.exists() && newData.val() > data.val() && newData.val() <= data.val() + 25 && now - data.parent().child('at').val() >= 20000))"
+            },
+            "at": {
+              ".validate": "newData.val() == now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

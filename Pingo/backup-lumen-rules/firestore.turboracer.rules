@@ -1,0 +1,69 @@
+rules_version = '2';
+// Isolated database: turboracer. No default Lumen database rules are deployed.
+// players/{uid}: username (immutable, 3–20 lowercase identifier), save (strict map), updatedAt (server timestamp).
+// usernames/{name}: uid only, immutable reservation bound to the authenticated synthetic identity.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function identity(name) {
+      return request.auth != null && name is string && name.size() >= 3 && name.size() <= 20
+        && name.matches('^[a-z0-9_-]{3,20}$') && request.auth.token.email == name + '@turboracer.game';
+    }
+    function lap(t) { return t == null || (t is number && t > 0 && t <= 86400); }
+    function validSave(s) {
+      return s is map && s.keys().hasAll(['coins','owned','equipped','bestLap','volume','car','custom','parts','best','track'])
+        && s.keys().hasOnly(['coins','owned','equipped','bestLap','volume','car','custom','parts','best','track','upg','daily'])
+        && (!('upg' in s) || validUpg(s.upg)) && (!('daily' in s) || validDaily(s.daily))
+        && s.coins is int && s.coins >= 0 && s.coins <= 100000000
+        && s.owned is list && s.owned.size() >= 1 && s.owned.size() <= 8
+        && s.owned.hasOnly(['blue','red','yellow','green','orange','purple','white','black']) && s.owned.hasAll(['blue'])
+        && s.equipped in s.owned && s.equipped is string
+        && s.volume is number && s.volume >= 0 && s.volume <= 1
+        && s.car in ['gt','pebble'] && s.track in ['classic','canyon','city','snow','rain']
+        && s.custom is map && s.custom.keys().hasAll(['rim','spoiler','stripe','glow']) && s.custom.keys().hasOnly(['rim','spoiler','stripe','glow'])
+        && s.custom.rim in ['silver','black','gold','neon'] && s.custom.spoiler in ['none','duck','wing','rally']
+        && s.custom.stripe in ['none','racing','side','number'] && s.custom.glow in ['none','cyan','pink','lime','violet']
+        && s.parts is list && s.parts.size() >= 6 && s.parts.size() <= 19
+        && s.parts.hasOnly(['car:gt','car:pebble','rim:silver','rim:black','rim:gold','rim:neon','spoiler:none','spoiler:duck','spoiler:wing','spoiler:rally','stripe:none','stripe:racing','stripe:side','stripe:number','glow:none','glow:cyan','glow:pink','glow:lime','glow:violet'])
+        && s.parts.hasAll(['car:gt','car:pebble','rim:silver','spoiler:none','stripe:none','glow:none'])
+        && ('rim:' + s.custom.rim) in s.parts && ('spoiler:' + s.custom.spoiler) in s.parts
+        && ('stripe:' + s.custom.stripe) in s.parts && ('glow:' + s.custom.glow) in s.parts
+        && s.best is map && s.best.keys().hasAll(['classic','canyon']) && s.best.keys().hasOnly(['classic','canyon','city','snow','rain'])
+        && lap(s.best.classic) && lap(s.best.canyon) && lap(s.bestLap) && s.bestLap == s.best.classic
+        && (!('city' in s.best) || lap(s.best.city)) && (!('snow' in s.best) || lap(s.best.snow)) && (!('rain' in s.best) || lap(s.best.rain));
+    }
+    function lvl(v) { return v is int && v >= 0 && v <= 5; }
+    function validUpg(u) {
+      return u is map && u.keys().hasAll(['engine','accel','handling','nitro','brakes']) && u.keys().hasOnly(['engine','accel','handling','nitro','brakes'])
+        && lvl(u.engine) && lvl(u.accel) && lvl(u.handling) && lvl(u.nitro) && lvl(u.brakes);
+    }
+    function cnt(v) { return v is int && v >= 0 && v <= 1000; }
+    function validDaily(d) {
+      return d is map && d.keys().hasAll(['day','p','c']) && d.keys().hasOnly(['day','p','c'])
+        && d.day is string && d.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.p is list && d.p.size() == 3 && cnt(d.p[0]) && cnt(d.p[1]) && cnt(d.p[2])
+        && d.c is list && d.c.size() == 3 && d.c[0] is bool && d.c[1] is bool && d.c[2] is bool;
+    }
+    function validPlayer(d) {
+      return d.keys().hasAll(['username','save','updatedAt']) && d.keys().hasOnly(['username','save','updatedAt'])
+        && identity(d.username) && validSave(d.save) && d.updatedAt is timestamp && d.updatedAt == request.time;
+    }
+    match /players/{uid} {
+      allow get: if owner(uid);
+      allow create: if owner(uid) && validPlayer(request.resource.data)
+        && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == uid;
+      allow update: if owner(uid) && validPlayer(request.resource.data)
+        && request.resource.data.username == resource.data.username
+        && get(/databases/$(database)/documents/usernames/$(resource.data.username)).data.uid == uid;
+      allow list, delete: if false;
+    }
+    match /usernames/{name} {
+      allow get: if identity(name);
+      allow create: if identity(name) && request.resource.data.keys().hasAll(['uid'])
+        && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/players/$(request.auth.uid)).data.username == name;
+      allow list, update, delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

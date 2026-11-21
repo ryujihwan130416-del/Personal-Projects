@@ -1,0 +1,13 @@
+{
+  "appId": "app.pingo.messenger",
+  "appName": "Pingo",
+  "webDir": "dist",
+  "server": {
+    "hostname": "pingo-messenger.web.app",
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#1d0f18"
+  }
+}
