@@ -200,6 +200,8 @@ export function ChatPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const typingTimer = useRef<number>(0)
   const marked = useRef<Set<string>>(new Set())
+  // Kept on screen until the server copy shows up. A limited query can omit a write that is still in flight.
+  const pendingSends = useRef<Map<string, MessageDoc>>(new Map())
 
   useEffect(() => {
     if (!chatId) return
@@ -253,8 +255,11 @@ export function ChatPage() {
     const qy = query(collection(db, ...fsCol('chats', chatId, 'messages')), orderBy('createdAt', 'asc'), limitToLast(msgWindow))
     return onSnapshot(qy, (snap) => {
       const next = snap.docs.map((d) => asMsg(d.id, d.data()))
-      if (msgWindow === OPEN_PAGE) rememberMessages(chatId, next)
-      setMessages(next)
+      for (const id of next) pendingSends.current.delete(id.id)
+      const pending = [...pendingSends.current.values()].filter((m) => !next.some((x) => x.id === m.id))
+      const merged = pending.length ? [...next, ...pending].sort((a, b) => (a.createdAt?.toMillis() ?? 0) - (b.createdAt?.toMillis() ?? 0)) : next
+      if (msgWindow === OPEN_PAGE) rememberMessages(chatId, merged)
+      setMessages(merged)
       setReachedStart(snap.docs.length < msgWindow)
     })
   }, [chatId, msgWindow])
@@ -384,6 +389,7 @@ export function ChatPage() {
     stickRef.current = true
     setReplyTo(null)
     setSending(true)
+    let localId = ''
     try {
       const replyTo = replySnapshot
       const reply = replyTo
@@ -392,7 +398,7 @@ export function ChatPage() {
       // A client timestamp is visible in ordered queries immediately. A server timestamp stays hidden until the round trip finishes.
       const sentAt = Timestamp.now()
       const msgRef = doc(collection(db, ...fsCol('chats', chatId, 'messages')))
-      const saved = setDoc(msgRef, {
+      const payload = {
         senderId: user.uid,
         text: body,
         type,
@@ -404,7 +410,12 @@ export function ChatPage() {
         replyTo: reply,
         reactions: {},
         readBy: { [user.uid]: sentAt },
-      })
+      }
+      localId = msgRef.id
+      const optimistic = asMsg(msgRef.id, payload)
+      pendingSends.current.set(msgRef.id, optimistic)
+      setMessages((prev) => prev.some((m) => m.id === optimistic.id) ? prev : [...prev, optimistic])
+      const saved = setDoc(msgRef, payload)
       const preview = String(extra?.preview ?? (type === 'photo' ? t('common.photo') : type === 'voice' ? '🎤 Voice message' : body) ?? '')
       const isGroup = chat.type === 'group'
       pingMembers(user.uid, chat.memberIds, msgRef.id, { kind: 'msg', chatId, title: isGroup ? `${chat.title || 'Group'} · ${profile.displayName}` : profile.displayName, body: preview, ...(isGroup ? { group: chat.title || 'Group' } : {}) })
@@ -424,6 +435,10 @@ export function ChatPage() {
       typingOn.current = false
       setTyping(false)
     } catch (err) {
+      if (localId) {
+        pendingSends.current.delete(localId)
+        setMessages((prev) => prev.filter((m) => m.id !== localId))
+      }
       if (fromComposer) setText((cur) => cur || body)
       if (replySnapshot) setReplyTo((cur) => cur ?? replySnapshot)
       toast(err instanceof Error ? err.message : t('chat.sendFailed'))

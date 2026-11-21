@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { initializeApp } from 'firebase/app'
 import {
   browserLocalPersistence,
@@ -35,13 +36,24 @@ export const auth = initializeAuth(app, {
   persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence],
   popupRedirectResolver: browserPopupRedirectResolver,
 })
-// Disk cache so chats and new messages paint from this device immediately, then catch up with the server.
+function isAppWebView() {
+  if (typeof window === 'undefined') return false
+  try {
+    if (Capacitor.isNativePlatform()) return true
+  } catch { /* the native bridge is not installed on the web */ }
+  const ua = navigator.userAgent || ''
+  return /; wv\)/.test(ua) || /Capacitor/i.test(ua)
+}
+
+// The Android WebView has one page. The multi-tab disk cache waits for a "primary tab" lease that
+// WebView never grants, so writes (sending a message) sit forever. The website keeps the shared cache.
 function openFirestore() {
   const id = firestoreDatabaseId || undefined
+  const localCache = isAppWebView()
+    ? memoryLocalCache()
+    : persistentLocalCache({ tabManager: persistentMultipleTabManager() })
   try {
-    return initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-    }, id)
+    return initializeFirestore(app, { localCache }, id)
   } catch {
     return initializeFirestore(app, { localCache: memoryLocalCache() }, id)
   }
