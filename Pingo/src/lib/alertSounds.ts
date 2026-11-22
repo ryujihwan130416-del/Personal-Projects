@@ -58,23 +58,39 @@ let ring: Loop | null = null
 let back: Loop | null = null
 
 function ringBurst(a: AudioContext, out: AudioNode, t0: number) {
-  const seq = [1046.5, 1318.5, 1568, 1318.5, 1568, 2093] // C6 E6 G6 E6 G6 C7
-  for (const start of [0, 0.75]) seq.forEach((f, i) => { note(a, out, f, t0 + start + i * 0.085, 0.32, 0.22, 'triangle'); note(a, out, f * 2, t0 + start + i * 0.085, 0.12, 0.05) })
+  // One voice, two short beeps. Notes no longer stack into several rings at once.
+  note(a, out, 880, t0, 0.38, 0.2, 'sine')
+  note(a, out, 880, t0 + 0.52, 0.38, 0.2, 'sine')
 }
+let ringGen = 0
 export function startRingtone() {
   if (ring || !prefs.ring) return
   const a = ac(); if (!a) return
-  const gain = a.createGain(); gain.gain.value = 0.9; gain.connect(a.destination)
+  const gain = a.createGain(); gain.gain.value = 0.7; gain.connect(a.destination)
+  const gen = ++ringGen
+  ring = { timer: 0, gain }
+  let last = 0
   const play = () => {
-    ringBurst(a, gain, a.currentTime + 0.05)
-    if (prefs.vibrate) try { navigator.vibrate?.([500, 250, 500]) } catch { /* ignore */ }
+    if (gen !== ringGen || !ring) return
+    const now = Date.now()
+    // A backgrounded WebView can fire several timers together when the app returns.
+    if (now - last < 1800) {
+      ring.timer = window.setTimeout(play, 1800 - (now - last))
+      return
+    }
+    last = now
+    ringBurst(a, gain, a.currentTime + 0.02)
+    if (prefs.vibrate) try { navigator.vibrate?.([400, 200, 400]) } catch { /* ignore */ }
+    ring.timer = window.setTimeout(play, 2400)
   }
   play()
-  ring = { timer: window.setInterval(play, 2800), gain }
 }
 export function stopRingtone() {
+  ringGen += 1
   if (!ring) return
-  clearInterval(ring.timer); ring.gain.disconnect(); ring = null
+  clearTimeout(ring.timer)
+  try { ring.gain.disconnect() } catch { /* already stopped */ }
+  ring = null
   try { navigator.vibrate?.(0) } catch { /* ignore */ }
 }
 

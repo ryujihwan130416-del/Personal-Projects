@@ -135,8 +135,11 @@ export function Alerts() {
       const title = video ? tx('📹 {name} is video calling…', { name }) : tx('📞 {name} is calling…', { name })
       const body = tx('Tap to answer in Pingo')
       // Android app in the background: the system call notification rings (never both at once).
-      if (!isNative || appActive()) startRingtone()
-      if (isNative) void safe(() => PingoNative.incomingCall({ title, body, url: `/chat/${call.chatId}`, video, key: call.id }))
+      if (!isNative || appActive()) {
+        if (isNative) void safe(() => PingoNative.cancelCall())
+        startRingtone()
+      }
+      if (isNative && !appActive()) void safe(() => PingoNative.incomingCall({ title, body, url: `/chat/${call.chatId}`, video, key: call.id }))
       else if (!appActive()) callNote.current = webNotify(title, body, `call-${call.id}`, () => nav(`/chat/${call.chatId}`), true)
       // Missed after 45 s if nobody answers.
       const t = window.setTimeout(() => { stopRingtone(); if (isNative) void safe(() => PingoNative.cancelCall()) }, 45000)
@@ -157,7 +160,7 @@ export function Alerts() {
     const h = PingoNative.addListener('appState', ({ active }) => {
       const c = callRef.current
       if (phaseRef.current !== 'incoming' || !c) return
-      if (active) startRingtone()
+      if (active) { void safe(() => PingoNative.cancelCall()); startRingtone() }
       else {
         stopRingtone()
         const name = chats.current.get(c.chatId)?.memberInfo[c.callerId]?.displayName || tx('Someone')
