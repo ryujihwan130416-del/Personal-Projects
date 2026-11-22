@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pingo for Android</title><link rel="icon" href="/favicon.svg">
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:radial-gradient(circle at 20% 0%,#5b2a86 0,#1c1220 55%);color:#f5eefc;padding:24px}
+.card{max-width:440px;width:100%;background:#2a1c30cc;border:1px solid #ffffff22;border-radius:24px;padding:28px;box-shadow:0 20px 60px #0008;text-align:center}
+img{width:84px;height:84px;border-radius:22px}h1{margin:12px 0 4px;font-size:28px}p{opacity:.85;line-height:1.5;margin:6px 0}
+.btn{display:block;margin:20px 0 8px;padding:16px;border-radius:16px;background:linear-gradient(135deg,#a855f7,#ff7a59);color:#fff;font-weight:800;font-size:18px;text-decoration:none}
+ol{text-align:left;font-size:14px;line-height:1.6;padding-left:20px;opacity:.9}small{opacity:.6;font-size:12px;word-break:break-all}.lang{margin-top:14px;font-size:13px}.lang a{color:#d8b4fe}
+</style></head><body><div class="card">
+<img src="/favicon.svg" alt=""><h1>Pingo</h1>
+<p data-ko="안드로이드용 Pingo 앱 (v1.0, 4MB)" data-en="Pingo for Android (v1.0, 4 MB)">안드로이드용 Pingo 앱 (v1.0, 4MB)</p>
+<a class="btn" href="/download/pingo.apk" download data-ko="APK 다운로드" data-en="Download APK">APK 다운로드</a>
+<ol data-ko='<li>위 버튼으로 pingo.apk를 받으세요.</li><li>파일을 열고, "알 수 없는 앱 설치"를 허용하라는 안내가 나오면 브라우저(Chrome 등)에 허용해 주세요.</li><li>설치 후 Pingo를 열고 이메일로 로그인하세요.</li><li>알림과 배터리 최적화 제외를 허용하면 화면이 꺼져 있어도 메시지·전화 알림을 받을 수 있어요.</li>' data-en='<li>Tap the button to download pingo.apk.</li><li>Open it. If Android asks, allow "Install unknown apps" for your browser (e.g. Chrome).</li><li>Open Pingo and sign in with email.</li><li>Allow notifications and "ignore battery optimization" so messages and calls arrive even when the screen is off.</li>'>
+<li>위 버튼으로 pingo.apk를 받으세요.</li><li>파일을 열고, "알 수 없는 앱 설치"를 허용하라는 안내가 나오면 브라우저(Chrome 등)에 허용해 주세요.</li><li>설치 후 Pingo를 열고 이메일로 로그인하세요.</li><li>알림과 배터리 최적화 제외를 허용하면 화면이 꺼져 있어도 메시지·전화 알림을 받을 수 있어요.</li></ol>
+<small>SHA-256: 6f519d84b234500782bc9f53b25e25dace38cf6ecca11e163ca49350d4cb012f</small>
+<div class="lang"><a href="#" id="sw">English</a> · <a href="/">pingo-messenger.web.app</a></div>
+</div><script>
+var ko=!(navigator.language||'').toLowerCase().startsWith('ko');function set(k){document.documentElement.lang=k?'ko':'en';document.querySelectorAll('[data-ko]').forEach(function(e){e.innerHTML=e.getAttribute(k?'data-ko':'data-en')});document.getElementById('sw').textContent=k?'English':'한국어';ko=k}
+set(!ko);document.getElementById('sw').onclick=function(e){e.preventDefault();set(!ko)}
+</script></body></html>

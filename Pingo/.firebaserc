@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "lumen-fcf2f",
+    "demo": "demo-dmapp"
+  },
+  "targets": {
+    "lumen-fcf2f": {
+      "hosting": {
+        "dmly": [
+          "dmly-app"
+        ],
+        "pingo": [
+          "pingo-messenger"
+        ]
+      }
+    }
+  }
+}

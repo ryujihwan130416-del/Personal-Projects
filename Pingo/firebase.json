@@ -1,0 +1,95 @@
+{
+  "hosting": [
+    {
+      "target": "pingo",
+      "public": "dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/assets/**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "firestore": [
+    {
+      "database": "turboracer",
+      "rules": "firestore.lumen-merged.rules",
+      "indexes": "firestore.lumen-merged.indexes.json"
+    }
+  ],
+  "database": {
+    "rules": "database.lumen-merged.rules.json"
+  },
+  "emulators": {
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9099
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "database": {
+      "host": "127.0.0.1",
+      "port": 9000
+    },
+    "storage": {
+      "host": "127.0.0.1",
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 4000
+    },
+    "singleProjectMode": true
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Pingo",
+        "supportEmail": "ryujihwan130416@gmail.com",
+        "authorizedRedirectUris": [
+          "https://lumen-fcf2f.firebaseapp.com/__/auth/handler",
+          "https://lumen-fcf2f.web.app/__/auth/handler",
+          "https://pingo-messenger.web.app/__/auth/handler",
+          "https://pingo-messenger.firebaseapp.com/__/auth/handler"
+        ]
+      }
+    },
+    "authorizedDomains": [
+      "lumen-fcf2f.firebaseapp.com",
+      "lumen-fcf2f.web.app",
+      "dmly-app.web.app",
+      "dmly-app.firebaseapp.com",
+      "pingo-messenger.web.app",
+      "pingo-messenger.firebaseapp.com"
+    ]
+  }
+}

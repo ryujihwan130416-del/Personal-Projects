@@ -20,6 +20,7 @@ function mergePages(current: SearchPage | null, next: SearchPage): SearchPage {
 import { FilterPanel, KeyDialog, PlayerDock, Skeletons, VideoCard } from './ui'
 import { formatCount } from './format'
 import { GraphPad } from './GraphPad'
+import { embeddedLumen, leaveLumen } from './embed'
 
 const KEY_REQUIRED = '실제 유튜브 영상을 검색하려면 YouTube Data API 키가 필요합니다.'
 
@@ -374,6 +375,11 @@ export function App() {
         Skip to results
       </a>
       <header>
+        {embeddedLumen() ? (
+          <button type="button" className="lumen-exit" onClick={leaveLumen}>
+            나가기
+          </button>
+        ) : null}
         <div className="brand-lockup">
           <span className="mark" aria-hidden="true" />
           <div>
@@ -442,10 +448,10 @@ export function App() {
                 </h2>
                 <p className="lede">
                   {sampleMode
-                    ? '샘플 목록에서만 찾습니다. 세 번 검색하면 그 검색을 바탕으로 추천 영상이 자동으로 나옵니다.'
+                    ? '샘플 목록에서만 찾습니다. 검색하면 그 결과만 보여 줍니다.'
                     : !apiKey
                       ? `${KEY_REQUIRED} 키를 넣은 뒤 검색하면, 검색어가 들어간 영상부터 보여주고 Load More로 다음 페이지만 불러옵니다.`
-                      : '검색어가 들어간 영상부터 보여 줍니다. 세 번 검색하면 추천 영상이 자동으로 따라옵니다.'}
+                      : '검색어가 들어간 영상부터 보여 줍니다. 검색 중에는 추천 영상을 띄우지 않습니다.'}
                 </p>
               </section>
             ) : null}
@@ -513,7 +519,7 @@ export function App() {
               ))}
             </div>
 
-            {visibleRecommendations.length > 0 ? (
+            {!applied && status !== 'loading' && visibleRecommendations.length > 0 ? (
               <RecommendRow
                 videos={visibleRecommendations}
                 categories={categories}

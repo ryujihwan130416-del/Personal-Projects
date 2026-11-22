@@ -1,0 +1,414 @@
+rules_version = '2';
+// Isolated database: turboracer. No default Lumen database rules are deployed.
+// players/{uid}: username (immutable, 3–20 lowercase identifier), save (strict map), updatedAt (server timestamp).
+// usernames/{name}: uid only, immutable reservation bound to the authenticated synthetic identity.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function identity(name) {
+      return request.auth != null && name is string && name.size() >= 3 && name.size() <= 20
+        && name.matches('^[a-z0-9_-]{3,20}$') && request.auth.token.email == name + '@turboracer.game';
+    }
+    function lap(t) { return t == null || (t is number && t > 0 && t <= 86400); }
+    function validSave(s) {
+      return s is map && s.keys().hasAll(['coins','owned','equipped','bestLap','volume','car','custom','parts','best','track'])
+        && s.keys().hasOnly(['coins','owned','equipped','bestLap','volume','car','custom','parts','best','track','upg','daily'])
+        && (!('upg' in s) || validUpg(s.upg)) && (!('daily' in s) || validDaily(s.daily))
+        && s.coins is int && s.coins >= 0 && s.coins <= 100000000
+        && s.owned is list && s.owned.size() >= 1 && s.owned.size() <= 8
+        && s.owned.hasOnly(['blue','red','yellow','green','orange','purple','white','black']) && s.owned.hasAll(['blue'])
+        && s.equipped in s.owned && s.equipped is string
+        && s.volume is number && s.volume >= 0 && s.volume <= 1
+        && s.car in ['gt','pebble'] && s.track in ['classic','canyon','city','snow','rain']
+        && s.custom is map && s.custom.keys().hasAll(['rim','spoiler','stripe','glow']) && s.custom.keys().hasOnly(['rim','spoiler','stripe','glow'])
+        && s.custom.rim in ['silver','black','gold','neon'] && s.custom.spoiler in ['none','duck','wing','rally']
+        && s.custom.stripe in ['none','racing','side','number'] && s.custom.glow in ['none','cyan','pink','lime','violet']
+        && s.parts is list && s.parts.size() >= 6 && s.parts.size() <= 19
+        && s.parts.hasOnly(['car:gt','car:pebble','rim:silver','rim:black','rim:gold','rim:neon','spoiler:none','spoiler:duck','spoiler:wing','spoiler:rally','stripe:none','stripe:racing','stripe:side','stripe:number','glow:none','glow:cyan','glow:pink','glow:lime','glow:violet'])
+        && s.parts.hasAll(['car:gt','car:pebble','rim:silver','spoiler:none','stripe:none','glow:none'])
+        && ('rim:' + s.custom.rim) in s.parts && ('spoiler:' + s.custom.spoiler) in s.parts
+        && ('stripe:' + s.custom.stripe) in s.parts && ('glow:' + s.custom.glow) in s.parts
+        && s.best is map && s.best.keys().hasAll(['classic','canyon']) && s.best.keys().hasOnly(['classic','canyon','city','snow','rain'])
+        && lap(s.best.classic) && lap(s.best.canyon) && lap(s.bestLap) && s.bestLap == s.best.classic
+        && (!('city' in s.best) || lap(s.best.city)) && (!('snow' in s.best) || lap(s.best.snow)) && (!('rain' in s.best) || lap(s.best.rain));
+    }
+    function lvl(v) { return v is int && v >= 0 && v <= 5; }
+    function validUpg(u) {
+      return u is map && u.keys().hasAll(['engine','accel','handling','nitro','brakes']) && u.keys().hasOnly(['engine','accel','handling','nitro','brakes'])
+        && lvl(u.engine) && lvl(u.accel) && lvl(u.handling) && lvl(u.nitro) && lvl(u.brakes);
+    }
+    function cnt(v) { return v is int && v >= 0 && v <= 1000; }
+    function validDaily(d) {
+      return d is map && d.keys().hasAll(['day','p','c']) && d.keys().hasOnly(['day','p','c'])
+        && d.day is string && d.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.p is list && d.p.size() == 3 && cnt(d.p[0]) && cnt(d.p[1]) && cnt(d.p[2])
+        && d.c is list && d.c.size() == 3 && d.c[0] is bool && d.c[1] is bool && d.c[2] is bool;
+    }
+    function validPlayer(d) {
+      return d.keys().hasAll(['username','save','updatedAt']) && d.keys().hasOnly(['username','save','updatedAt'])
+        && identity(d.username) && validSave(d.save) && d.updatedAt is timestamp && d.updatedAt == request.time;
+    }
+    match /players/{uid} {
+      allow get: if owner(uid);
+      allow create: if owner(uid) && validPlayer(request.resource.data)
+        && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == uid;
+      allow update: if owner(uid) && validPlayer(request.resource.data)
+        && request.resource.data.username == resource.data.username
+        && get(/databases/$(database)/documents/usernames/$(resource.data.username)).data.uid == uid;
+      allow list, delete: if false;
+    }
+    match /usernames/{name} {
+      allow get: if identity(name);
+      allow create: if identity(name) && request.resource.data.keys().hasAll(['uid'])
+        && request.resource.data.keys().hasOnly(['uid']) && request.resource.data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/players/$(request.auth.uid)).data.username == name;
+      allow list, update, delete: if false;
+    }
+    // ===== DMly isolated namespace (additive). Grants no access outside /dmly/. =====
+    match /dmly/app {
+      allow read, write: if false;
+
+      function signedIn() {
+        return request.auth != null;
+      }
+      // Pingo admin console: this one account can read and write everything under dmly/app.
+      function isAdmin() {
+        return request.auth != null && request.auth.uid == '2agMzRLd2yeI4OorKuv3opTwdzD3';
+      }
+      match /{adminPath=**} {
+        allow read, write: if isAdmin();
+      }
+      function modDoc() {
+        return /databases/$(database)/documents/dmly/app/moderation/$(request.auth.uid);
+      }
+      // Suspended (until a future time) or banned users cannot post or send messages.
+      function notSuspended() {
+        return !exists(modDoc())
+          || !(get(modDoc()).data.get('state', 'ok') == 'banned'
+            || (get(modDoc()).data.get('state', 'ok') == 'suspended'
+              && get(modDoc()).data.get('until', request.time) > request.time));
+      }
+
+      match /moderation/{uid} {
+        allow read: if signedIn() && request.auth.uid == uid;
+      }
+      match /config/{name} {
+        allow read: if signedIn() || name == 'ui';
+      }
+      match /announcements/{id} {
+        allow read: if signedIn();
+      }
+      // Daily counters for the admin charts, bumped by the app (messages +1, game plays).
+      match /stats/{day} {
+        allow create, update: if signedIn()
+          && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && request.resource.data.keys().hasOnly(['messages', 'games', 'updatedAt'])
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.get('messages', 0) is int
+          && request.resource.data.get('messages', 0) >= (resource == null ? 0 : resource.data.get('messages', 0))
+          && request.resource.data.get('messages', 0) <= (resource == null ? 0 : resource.data.get('messages', 0)) + 1
+          && request.resource.data.get('games', {}) is map
+          && request.resource.data.get('games', {}).size() <= 30;
+      }
+      // Activity log for the admin console (signup, login, reports filed/received).
+      match /activity/{id} {
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['uid', 'actor', 'type', 'meta', 'at'])
+          && request.resource.data.actor == request.auth.uid
+          && request.resource.data.at == request.time
+          && request.resource.data.uid is string
+          && request.resource.data.meta is map
+          && request.resource.data.meta.size() <= 6
+          && (
+            (request.resource.data.uid == request.auth.uid
+              && request.resource.data.type in ['signup', 'login', 'report_filed'])
+            || request.resource.data.type == 'report_received'
+          );
+      }
+      match /flags/{flagId} {
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['messageId', 'chatId', 'senderId', 'category', 'categories', 'terms', 'snippet', 'createdAt', 'source', 'status', 'flaggedBy'])
+          && request.resource.data.flaggedBy == request.auth.uid
+          && request.resource.data.status == 'open'
+          && request.resource.data.source in ['send', 'edit']
+          && request.resource.data.messageId is string
+          && request.resource.data.chatId is string
+          && request.resource.data.senderId is string
+          && request.resource.data.category is string
+          && request.resource.data.category.size() <= 40
+          && request.resource.data.categories is list
+          && request.resource.data.categories.size() <= 12
+          && request.resource.data.terms is list
+          && request.resource.data.terms.size() <= 12
+          && request.resource.data.snippet is string
+          && request.resource.data.snippet.size() <= 300
+          && request.resource.data.createdAt == request.time
+          && request.auth.uid in get(/databases/$(database)/documents/dmly/app/chats/$(request.resource.data.chatId)).data.memberIds
+          && request.resource.data.senderId in get(/databases/$(database)/documents/dmly/app/chats/$(request.resource.data.chatId)).data.memberIds;
+      }
+      function isSelf(uid) {
+        return signedIn() && request.auth.uid == uid;
+      }
+      function isValidUsername(u) {
+        return u is string && u.size() >= 3 && u.size() <= 20;
+      }
+
+      match /users/{uid} {
+        allow read: if signedIn();
+        allow create: if isSelf(uid)
+          && request.resource.data.keys().hasAll(['username', 'displayName'])
+          && isValidUsername(request.resource.data.username)
+          && request.resource.data.displayName is string
+          && request.resource.data.displayName.size() > 0
+          && request.resource.data.displayName.size() <= 40;
+        allow update: if isSelf(uid)
+          && request.resource.data.username == resource.data.username
+          && request.resource.data.username is string;
+        allow delete: if false;
+
+        match /blocked/{blockedUid} {
+          allow read: if isSelf(uid);
+          allow create, delete: if isSelf(uid) && blockedUid != uid;
+          allow update: if false;
+        }
+        match /following/{otherId} {
+          allow read: if signedIn();
+          allow create, delete: if isSelf(uid) && otherId != uid;
+          allow update: if false;
+        }
+        match /followers/{followerId} {
+          allow read: if signedIn();
+          allow create, delete: if signedIn() && request.auth.uid == followerId && followerId != uid;
+          allow update: if false;
+        }
+        match /gameStats/{type} {
+          allow read: if signedIn();
+          allow write: if isSelf(uid);
+        }
+      }
+
+      match /usernames/{name} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.uid == request.auth.uid
+          && isValidUsername(name);
+        allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+        allow update: if false;
+      }
+
+      match /reports/{id} {
+        allow read: if signedIn() && resource.data.reporterId == request.auth.uid;
+        allow create: if signedIn()
+          && request.resource.data.reporterId == request.auth.uid
+          && request.resource.data.targetUid is string
+          && request.resource.data.reason is string
+          && request.resource.data.reason.size() > 0
+          && request.resource.data.reason.size() <= 500
+          && request.resource.data.get('status', 'open') == 'open'
+          && request.resource.data.get('note', '') is string
+          && request.resource.data.get('note', '').size() <= 1000
+          && !('resolution' in request.resource.data);
+        // A reporter can withdraw their own report while nobody has acted on it.
+        allow delete: if signedIn()
+          && resource.data.reporterId == request.auth.uid
+          && resource.data.get('status', 'open') == 'open';
+        allow update: if false;
+      }
+
+      match /leaderboard/{uid} {
+        allow read: if signedIn();
+        allow write: if isSelf(uid);
+      }
+
+      function chatData(chatId) {
+        return get(/databases/$(database)/documents/dmly/app/chats/$(chatId)).data;
+      }
+      function isChatMember(chatId) {
+        return signedIn() && request.auth.uid in chatData(chatId).memberIds;
+      }
+      function notBlockedInChat(chatId) {
+        return !(request.auth.uid in chatData(chatId).get('blockedUids', []));
+      }
+
+      match /chats/{chatId} {
+        allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
+        allow create: if signedIn()
+          && request.auth.uid in request.resource.data.memberIds
+          && request.resource.data.memberIds.size() >= 2
+          && request.resource.data.memberIds.size() <= 20
+          && request.resource.data.type in ['dm', 'group']
+          && request.resource.data.createdBy == request.auth.uid;
+        allow update: if signedIn()
+          && request.auth.uid in resource.data.memberIds
+          && request.resource.data.memberIds == resource.data.memberIds
+          && request.resource.data.type == resource.data.type
+          && request.resource.data.createdBy == resource.data.createdBy
+          && (
+            request.resource.data.requestStatus == resource.data.requestStatus
+            || (
+              resource.data.requestStatus == 'pending'
+              && request.resource.data.requestStatus in ['accepted', 'declined']
+              && request.auth.uid != resource.data.requestFrom
+            )
+          );
+        allow delete: if false;
+
+        match /messages/{msgId} {
+          allow read: if isChatMember(chatId);
+          allow create: if isChatMember(chatId)
+            && notBlockedInChat(chatId)
+            && notSuspended()
+            && request.resource.data.senderId == request.auth.uid
+            && request.resource.data.type in ['text', 'photo', 'system', 'game', 'event', 'file', 'voice']
+            && request.resource.data.get('text', '').size() <= 4000
+            && request.resource.data.get('fileURL', '').size() <= 960000
+            && request.resource.data.get('audioURL', '').size() <= 700000;
+          allow update: if isChatMember(chatId)
+            && request.resource.data.senderId == resource.data.senderId
+            && request.resource.data.type == resource.data.type
+            && request.resource.data.createdAt == resource.data.createdAt
+            && (
+              (resource.data.senderId == request.auth.uid
+                && request.resource.data.unsent == true)
+              ||
+              (resource.data.senderId == request.auth.uid
+                && resource.data.type == 'text'
+                && resource.data.get('unsent', false) == false
+                && request.resource.data.get('unsent', false) == false
+                && request.resource.data.get('text', '') is string
+                && request.resource.data.get('text', '').size() > 0
+                && request.resource.data.get('text', '').size() <= 4000
+                && request.resource.data.get('photoURL', '') == resource.data.get('photoURL', '')
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited']))
+              ||
+              (request.resource.data.get('text', '') == resource.data.get('text', '')
+                && request.resource.data.get('photoURL', '') == resource.data.get('photoURL', '')
+                && request.resource.data.get('fileURL', '') == resource.data.get('fileURL', '')
+                && request.resource.data.get('audioURL', '') == resource.data.get('audioURL', '')
+                && request.resource.data.get('edited', false) == resource.data.get('edited', false)
+                && request.resource.data.get('unsent', false) == resource.data.get('unsent', false))
+            );
+          allow delete: if false;
+        }
+      }
+
+      match /calls/{callId} {
+        allow read: if signedIn() && request.auth.uid in resource.data.participantIds;
+        allow create: if signedIn()
+          && request.auth.uid == request.resource.data.callerId
+          && request.auth.uid in request.resource.data.participantIds
+          && request.resource.data.participantIds.size() >= 2
+          && request.resource.data.participantIds.size() <= 8
+          && request.resource.data.status == 'ringing'
+          && request.resource.data.type in ['audio', 'video'];
+        allow update: if signedIn() && request.auth.uid in resource.data.participantIds;
+        allow delete: if false;
+
+        match /candidates/{cid} {
+          allow read: if signedIn()
+            && request.auth.uid in get(/databases/$(database)/documents/dmly/app/calls/$(callId)).data.participantIds;
+          allow create: if signedIn()
+            && request.resource.data.from == request.auth.uid
+            && request.auth.uid in get(/databases/$(database)/documents/dmly/app/calls/$(callId)).data.participantIds;
+          allow update, delete: if false;
+        }
+      }
+
+      match /posts/{postId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && notSuspended()
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.get('text', '').size() <= 2000
+          && request.resource.data.get('photoURLs', []).size() <= 4;
+        allow update: if signedIn() && (
+          resource.data.authorId == request.auth.uid
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount'])
+        );
+        allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+
+        match /likes/{uid} {
+          allow read: if signedIn();
+          allow create, delete: if isSelf(uid);
+          allow update: if false;
+        }
+        match /comments/{cid} {
+          allow read: if signedIn();
+          allow create: if signedIn()
+            && request.resource.data.authorId == request.auth.uid
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 500;
+          allow delete: if signedIn() && (
+            request.auth.uid == resource.data.authorId
+            || request.auth.uid == get(/databases/$(database)/documents/dmly/app/posts/$(postId)).data.authorId
+          );
+          allow update: if false;
+        }
+      }
+
+      match /gameRooms/{roomId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.auth.uid == request.resource.data.hostId
+          && request.auth.uid in request.resource.data.playerIds
+          && request.resource.data.playerIds.size() >= 1
+          && request.resource.data.playerIds.size() <= 8
+          && request.resource.data.code is string
+          && request.resource.data.status == 'lobby';
+        allow update: if signedIn() && (
+          request.auth.uid in resource.data.playerIds
+          || (
+            resource.data.status == 'lobby'
+            && request.auth.uid in request.resource.data.playerIds
+            && request.resource.data.playerIds.size() <= resource.data.maxPlayers
+          )
+        );
+        allow delete: if signedIn() && request.auth.uid == resource.data.hostId;
+      }
+
+      match /events/{eventId} {
+        allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
+        allow create: if signedIn()
+          && request.resource.data.ownerId == request.auth.uid
+          && request.auth.uid in request.resource.data.memberIds
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 80
+          && request.resource.data.get('note', '').size() <= 2000
+          && (
+            (
+              request.resource.data.chatId == null
+              && request.resource.data.memberIds.size() == 1
+            )
+            || (
+              request.resource.data.chatId is string
+              && isChatMember(request.resource.data.chatId)
+              && request.resource.data.memberIds.hasAll(chatData(request.resource.data.chatId).memberIds)
+              && request.resource.data.memberIds.size() == chatData(request.resource.data.chatId).memberIds.size()
+            )
+          );
+        allow update: if signedIn()
+          && request.auth.uid == resource.data.ownerId
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.chatId == resource.data.chatId
+          && request.resource.data.memberIds == resource.data.memberIds
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 80;
+        allow delete: if signedIn() && request.auth.uid == resource.data.ownerId;
+
+        match /rsvp/{uid} {
+          allow read: if signedIn()
+            && request.auth.uid in get(/databases/$(database)/documents/dmly/app/events/$(eventId)).data.memberIds;
+          allow create, update: if isSelf(uid)
+            && request.auth.uid in get(/databases/$(database)/documents/dmly/app/events/$(eventId)).data.memberIds
+            && request.resource.data.status in ['going', 'maybe', 'no'];
+          allow delete: if isSelf(uid);
+        }
+      }
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
