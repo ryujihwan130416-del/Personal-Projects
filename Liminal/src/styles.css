@@ -579,7 +579,7 @@ body.is-gated .dock {
   line-height: 0.75;
   letter-spacing: -0.07em;
   color: transparent;
-  -webkit-text-stroke: 1px rgba(17, 17, 17, 0.1);
+  -webkit-text-stroke: 1px rgba(17, 17, 17, 0.22);
   pointer-events: none;
   text-transform: uppercase;
 }
@@ -710,6 +710,18 @@ body.is-gated .dock {
 
   .tour-copy {
     bottom: 12vh;
+    width: calc(100vw - 12vw);
+  }
+
+  .tour-title {
+    font-size: clamp(1.9rem, 8.2vw, 2.55rem);
+    letter-spacing: -0.04em;
+    line-height: 0.92;
+  }
+
+  .foot-meta {
+    max-width: 88vw;
+    letter-spacing: 0.1em;
   }
 
   .hangar .mega,
