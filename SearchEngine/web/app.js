@@ -116,9 +116,16 @@ crawlForm.addEventListener("submit", async (event) => {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.detail || "크롤 실패");
+      const detail = data.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d) => d.msg || JSON.stringify(d)).join("; ")
+        : detail || "크롤 실패";
+      throw new Error(message);
     }
-    crawlStatus.textContent = `${data.added}페이지 추가 · 전체 ${data.total}문서`;
+    const warn = Array.isArray(data.warnings) && data.warnings.length
+      ? ` · 참고: ${data.warnings[0]}`
+      : "";
+    crawlStatus.textContent = `${data.added}페이지 추가 · 전체 ${data.total}문서${warn}`;
     await refreshStats();
   } catch (err) {
     crawlStatus.textContent = err.message || "크롤 실패";

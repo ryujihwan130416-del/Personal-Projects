@@ -71,9 +71,19 @@ def tokenize(text: str) -> list[str]:
     return tokens
 
 
+def coerce_url(url: str) -> str:
+    """Accept bare domains like example.com by adding https://."""
+    raw = (url or "").strip()
+    if not raw:
+        raise ValueError("empty url")
+    if "://" not in raw:
+        raw = "https://" + raw
+    return raw
+
+
 def normalize_url(url: str) -> str:
-    parsed = urlparse(url.strip())
-    if not parsed.scheme or not parsed.netloc:
+    parsed = urlparse(coerce_url(url))
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
         raise ValueError(f"invalid url: {url}")
     path = parsed.path or "/"
     if path != "/" and path.endswith("/"):

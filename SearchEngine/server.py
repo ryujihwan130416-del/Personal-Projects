@@ -124,15 +124,22 @@ async def api_crawl(body: CrawlRequest) -> dict[str, Any]:
         _status["crawling"] = True
         _status["last_error"] = None
         try:
-            pages = await crawl(
+            crawl_result = await crawl(
                 body.seeds,
                 max_pages=body.max_pages,
                 max_depth=body.max_depth,
                 same_host_only=body.same_host_only,
             )
+            pages = crawl_result.pages
             if not pages:
-                _status["last_error"] = "수집된 페이지가 없습니다. URL이나 네트워크를 확인하세요."
-                raise HTTPException(status_code=400, detail=_status["last_error"])
+                hints = crawl_result.errors or crawl_result.skipped
+                detail = "수집된 페이지가 없습니다."
+                if hints:
+                    detail = detail + " " + hints[0]
+                else:
+                    detail += " URL이나 네트워크를 확인하세요. (예: example.com 또는 https://example.com)"
+                _status["last_error"] = detail
+                raise HTTPException(status_code=400, detail=detail)
             merged = merge_pages(_pages, pages_to_dicts(pages))
             rebuild_index(merged)
             _status["last_crawl_added"] = len(pages)
@@ -140,6 +147,7 @@ async def api_crawl(body: CrawlRequest) -> dict[str, Any]:
                 "added": len(pages),
                 "total": len(merged),
                 "seeds": body.seeds,
+                "warnings": (crawl_result.errors + crawl_result.skipped)[:5],
             }
         except HTTPException:
             raise
