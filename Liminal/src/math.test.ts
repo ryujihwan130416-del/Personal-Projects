@@ -28,6 +28,7 @@ describe("catalog", () => {
       true,
     );
     expect(findChapter("weather")?.titleKo).toContain("날씨");
+    expect(chapters.every((c) => c.ghost.length > 0)).toBe(true);
   });
 });
 

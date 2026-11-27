@@ -6,6 +6,9 @@ export type Chapter = {
   title: string;
   titleKo: string;
   still: string;
+  close?: string;
+  focus: string;
+  ghost: string;
   ken: Ken;
   theme: "light" | "dark";
 };
