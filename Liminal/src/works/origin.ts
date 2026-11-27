@@ -1,119 +1,96 @@
-import { glow, grain, trail, vignette } from "../draw";
-import { lerp, mulberry32, rgba, smoothstep, TAU } from "../math";
+import { fbm, flowAngle, grain, mix3, orb, spark, trail, vignette } from "../draw";
+import { lerp, mulberry32, smoothstep } from "../math";
 import type { Work, WorkRenderer } from "../types";
 
-type Particle = {
-  a: number;
-  r: number;
+type P = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
   s: number;
-  o: number;
-  birth: number;
-  hue: [number, number, number];
-  links: [number, number, number];
+  seed: number;
+  kind: number;
 };
 
-function makeParticles(n: number): Particle[] {
-  const rng = mulberry32(0x0e1914);
-  const particles: Particle[] = [];
-  for (let i = 0; i < n; i++) {
-    particles.push({
-      a: rng() * TAU,
-      r: 20 + rng() * 240,
-      s: 0.6 + rng() * 2.2,
-      o: (rng() - 0.5) * 0.35,
-      birth: rng() * 0.72,
-      hue:
-        rng() > 0.78
-          ? [255, 214, 160]
-          : rng() > 0.4
-            ? [255, 248, 236]
-            : [180, 210, 255],
-      links: [0, 0, 0],
-    });
-  }
-  for (let i = 0; i < n; i++) {
-    particles[i].links = [
-      (i + 1) % n,
-      (i + 7) % n,
-      (i + 19 + ((i * 3) % 11)) % n,
-    ];
-  }
-  return particles;
-}
-
 function create(): WorkRenderer {
-  const particles = makeParticles(420);
+  const rng = mulberry32(0x0e1914);
+  const ps: P[] = Array.from({ length: 1600 }, () => ({
+    x: rng(),
+    y: rng(),
+    vx: 0,
+    vy: 0,
+    s: 0.35 + rng() * 1.7,
+    seed: rng() * 100,
+    kind: rng(),
+  }));
 
   return {
     draw(ctx, frame) {
-      const { t, time, w, h, quality, reduceMotion } = frame;
-      const n = quality === "preview" || reduceMotion ? 140 : particles.length;
+      const { t, time, w, h, quality, reduceMotion, pointer, pointerX, pointerY } =
+        frame;
+      const n = quality === "preview" || reduceMotion ? 320 : ps.length;
+      const fade = lerp(0.16, 0.08, t);
+      trail(ctx, fade, "2,1,4");
 
-      const fade = lerp(0.42, 0.1, t);
-      if (t < 0.02) {
-        ctx.fillStyle = "#000000";
-        ctx.fillRect(0, 0, w, h);
-      } else {
-        trail(ctx, fade);
-      }
-
-      const cx = w * 0.5 + (frame.pointer ? (frame.pointerX - w * 0.5) * 0.04 : 0);
-      const cy = h * 0.5 + (frame.pointer ? (frame.pointerY - h * 0.5) * 0.04 : 0);
-      const born = smoothstep(0, 0.78, t);
-      const connect = smoothstep(0.28, 0.62, t);
-      const core = smoothstep(0.55, 0.92, t);
-      const scale = lerp(0.18, 1.05, t);
+      const cx = 0.5 + (pointer ? (pointerX / w - 0.5) * 0.06 : 0);
+      const cy = 0.5 + (pointer ? (pointerY / h - 0.5) * 0.06 : 0);
+      const gather = smoothstep(0.08, 0.62, t);
+      const bloom = smoothstep(0.55, 0.92, t);
+      const hush = smoothstep(0.88, 1, t);
+      const gold: [number, number, number] = [255, 214, 168];
+      const ice: [number, number, number] = [186, 214, 255];
+      const white: [number, number, number] = [255, 248, 240];
+      const col = mix3(gold, white, ice, t);
 
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
+      orb(ctx, cx * w, cy * h, Math.min(w, h) * lerp(0.14, 0.26, bloom), col, 0.08 + bloom * 0.08);
+      orb(
+        ctx,
+        cx * w,
+        cy * h,
+        Math.min(w, h) * lerp(0.03, 0.08, bloom),
+        white,
+        0.12 * bloom * (1 - hush * 0.35),
+      );
 
-      if (core > 0) {
-        const cr = lerp(6, Math.min(w, h) * 0.08, core);
-        glow(ctx, cx, cy, cr, [255, 236, 210], 0.16 * core);
-        glow(ctx, cx, cy, cr * 0.28, [255, 252, 245], 0.35 * core);
-      }
-
-      ctx.lineWidth = 0.7;
+      const motion = reduceMotion ? 0.25 : 1;
       for (let i = 0; i < n; i++) {
-        const p = particles[i];
-        if (t < p.birth) continue;
-        const life = smoothstep(p.birth, p.birth + 0.18, t);
-        const spin = p.a + time * p.o * (reduceMotion ? 0.15 : 1);
-        const pulse = Math.sin(time * 0.7 + p.a) * 6;
-        const rad = p.r * scale * born + pulse;
-        const x = cx + Math.cos(spin) * rad;
-        const y = cy + Math.sin(spin) * rad * 0.86;
-        const a = life * lerp(0.15, 0.95, t);
+        const p = ps[i];
+        const px = p.x * w;
+        const py = p.y * h;
+        const ang = flowAngle(px, py, time * motion + p.seed);
+        p.vx += Math.cos(ang) * 0.00055 * motion;
+        p.vy += Math.sin(ang) * 0.00055 * motion;
 
-        if (connect > 0.05) {
-          for (const idx of p.links) {
-            if (idx >= n) continue;
-            const q = particles[idx];
-            if (t < q.birth) continue;
-            const qspin = q.a + time * q.o * (reduceMotion ? 0.15 : 1);
-            const qrad = q.r * scale * born + Math.sin(time * 0.7 + q.a) * 6;
-            const qx = cx + Math.cos(qspin) * qrad;
-            const qy = cy + Math.sin(qspin) * qrad * 0.86;
-            const dist = Math.hypot(qx - x, qy - y);
-            const max = 90 + 70 * t;
-            if (dist > max) continue;
-            ctx.strokeStyle = rgba(
-              p.hue,
-              (1 - dist / max) * 0.22 * connect * life,
-            );
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(qx, qy);
-            ctx.stroke();
-          }
-        }
+        const dx = p.x - cx;
+        const dy = p.y - cy;
+        const dist = Math.hypot(dx, dy) + 0.0008;
+        const swirl = Math.atan2(dy, dx) + 0.55;
+        p.vx += (Math.cos(swirl) * 0.0003 - dx * 0.0011) * gather * motion;
+        p.vy += (Math.sin(swirl) * 0.0003 - dy * 0.0011) * gather * motion;
+        p.vx += (dx / dist) * bloom * 0.0011 * motion;
+        p.vy += (dy / dist) * bloom * 0.0011 * motion;
 
-        glow(ctx, x, y, p.s * life, p.hue, a);
+        p.vx *= 0.94;
+        p.vy *= 0.94;
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < -0.05) p.x += 1.1;
+        if (p.x > 1.05) p.x -= 1.1;
+        if (p.y < -0.05) p.y += 1.1;
+        if (p.y > 1.05) p.y -= 1.1;
+
+        const rgb = p.kind > 0.72 ? ice : p.kind > 0.4 ? white : gold;
+        const pulse = 0.65 + 0.35 * Math.sin(time * 0.9 + p.seed);
+        const size = p.s * lerp(7, 16, t) * pulse;
+        const a = (0.18 + t * 0.45) * pulse * (1 - hush * 0.15);
+        spark(ctx, p.x * w, p.y * h, size, rgb, a);
       }
 
       ctx.restore();
-      grain(ctx, w, h, 0.12 + t * 0.08);
-      vignette(ctx, w, h, 0.55);
+      grain(ctx, w, h, 0.07);
+      vignette(ctx, w, h, 0.42 + fbm(time * 0.2, t) * 0.04);
     },
   };
 }
@@ -123,36 +100,8 @@ export const origin: Work = {
   index: "01",
   title: "Origin of Light",
   titleKo: "빛은 천천히 태어난다",
-  line: "어둠에서 입자가 서로를 찾아 하나의 형태가 된다.",
-  tone: "#e8d5b5",
-  durationVh: 720,
-  previewT: (time) => 0.42 + Math.sin(time * 0.35) * 0.18,
-  captions: [
-    { at: 0.06, kicker: "00", line: "Nothing yet.", lineKo: "아직 아무것도 없다." },
-    {
-      at: 0.24,
-      kicker: "01",
-      line: "A particle remembers it can shine.",
-      lineKo: "한 점이 빛날 수 있다는 것을 기억한다.",
-    },
-    {
-      at: 0.48,
-      kicker: "02",
-      line: "Then they find each other.",
-      lineKo: "그리고 서로를 찾는다.",
-    },
-    {
-      at: 0.7,
-      kicker: "03",
-      line: "Form is only light agreeing to stay.",
-      lineKo: "형태는 빛이 머물기로 한 약속이다.",
-    },
-    {
-      at: 0.9,
-      kicker: "04",
-      line: "Origin of Light",
-      lineKo: "빛은 천천히 태어난다.",
-    },
-  ],
+  tone: "#f0d7b0",
+  durationVh: 820,
+  previewT: (time) => 0.58 + Math.sin(time * 0.22) * 0.16,
   create,
 };

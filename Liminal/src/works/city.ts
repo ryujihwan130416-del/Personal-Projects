@@ -1,155 +1,148 @@
-import { glow, grain, trail, vignette } from "../draw";
-import { lerp, mulberry32, rgba, smoothstep, TAU } from "../math";
+import { grain, mix3, neonPath, orb, spark, trail, vignette } from "../draw";
+import { lerp, mulberry32, smoothstep } from "../math";
 import type { Work, WorkRenderer } from "../types";
 
-type Building = {
-  x: number;
-  w: number;
-  h: number;
-  windows: { u: number; v: number }[];
-};
-
-type Node = { x: number; y: number; b: number };
+type Building = { x: number; w: number; h: number };
+type Light = { bx: number; u: number; v: number; warm: number; s: number };
 
 function create(): WorkRenderer {
   const rng = mulberry32(0xc17e);
   const buildings: Building[] = [];
-  let x = 0.02;
-  while (x < 0.98) {
-    const bw = 0.04 + rng() * 0.07;
-    const bh = 0.18 + rng() * 0.42;
-    const windows: Building["windows"] = [];
+  let x = 0.03;
+  while (x < 0.97) {
+    const bw = 0.035 + rng() * 0.055;
+    buildings.push({ x, w: bw, h: 0.16 + rng() * 0.46 });
+    x += bw + 0.006 + rng() * 0.01;
+  }
+  const lights: Light[] = [];
+  for (let bi = 0; bi < buildings.length; bi++) {
     const cols = 2 + ((rng() * 3) | 0);
-    const rows = 4 + ((rng() * 7) | 0);
+    const rows = 5 + ((rng() * 8) | 0);
     for (let c = 0; c < cols; c++) {
       for (let r = 0; r < rows; r++) {
-        if (rng() > 0.38) {
-          windows.push({
-            u: (c + 0.5) / cols,
-            v: (r + 0.35) / rows,
+        if (rng() > 0.18) {
+          lights.push({
+            bx: bi,
+            u: (c + 0.35 + rng() * 0.3) / cols,
+            v: (r + 0.25 + rng() * 0.2) / rows,
+            warm: rng(),
+            s: 0.6 + rng() * 1.2,
           });
         }
       }
     }
-    buildings.push({ x, w: bw, h: bh, windows });
-    x += bw + 0.008 + rng() * 0.012;
   }
-  const stars = Array.from({ length: 80 }, () => ({
+  const stars = Array.from({ length: 90 }, () => ({
     x: rng(),
-    y: rng() * 0.5,
+    y: rng() * 0.48,
     s: rng(),
   }));
 
   return {
     draw(ctx, frame) {
-      const { t, time, w, h, quality } = frame;
-      trail(ctx, 0.18, "4,6,14");
-      if (t < 0.02) {
-        ctx.fillStyle = "#04060e";
-        ctx.fillRect(0, 0, w, h);
-      }
-
+      const { t, time, w, h, quality, reduceMotion } = frame;
+      trail(ctx, 0.12, "3,5,12");
       const skyline = smoothstep(0.02, 0.2, t);
-      const lights = smoothstep(0.18, 0.42, t);
-      const wire = smoothstep(0.42, 0.68, t);
-      const signal = smoothstep(0.64, 0.92, t);
-      const horizon = h * 0.78;
+      const glowIn = smoothstep(0.02, 0.28, t);
+      const lift = smoothstep(0.55, 0.88, t);
+      const net = smoothstep(0.72, 1, t);
+      const horizon = h * 0.76;
+      const gold: [number, number, number] = [255, 210, 140];
+      const ice: [number, number, number] = [160, 210, 255];
+      const teal: [number, number, number] = [80, 200, 230];
 
       ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      orb(ctx, w * 0.5, h * 0.2, h * 0.55, [40, 60, 120], 0.1);
+      orb(ctx, w * 0.7, horizon - 40, w * 0.4, gold, 0.06 * glowIn);
+
       for (const s of stars) {
-        const tw = 0.3 + 0.7 * Math.abs(Math.sin(time * (0.6 + s.s) + s.x * 8));
-        glow(
-          ctx,
-          s.x * w,
-          s.y * h,
-          0.7,
-          [200, 220, 255],
-          0.25 * tw * (1 - signal * 0.6),
-        );
+        const tw = 0.35 + 0.65 * Math.abs(Math.sin(time * (0.5 + s.s) + s.x * 9));
+        spark(ctx, s.x * w, s.y * h, 3 + s.s * 3, ice, 0.2 * tw);
       }
 
-      const nodes: Node[] = [];
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = skyline * (1 - lift * 0.85);
       for (const b of buildings) {
         const bx = b.x * w;
         const bw = b.w * w;
         const bh = b.h * h * skyline;
-        const top = horizon - bh;
-        const buildingAlpha = (1 - signal) * skyline;
+        ctx.fillStyle = "rgba(8, 14, 32, 0.9)";
+        ctx.fillRect(bx, horizon - bh, bw, bh);
+      }
+      ctx.restore();
 
-        if (buildingAlpha > 0.02) {
-          if (wire > 0.55) {
-            ctx.strokeStyle = rgba([80, 200, 255], 0.35 * wire * buildingAlpha);
-            ctx.lineWidth = 1;
-            ctx.strokeRect(bx, top, bw, bh);
-          } else {
-            ctx.fillStyle = rgba(
-              [10, 14, 28],
-              0.92 * buildingAlpha * (1 - wire * 0.4),
-            );
-            ctx.fillRect(bx, top, bw, bh);
-            ctx.strokeStyle = rgba([30, 40, 70], 0.5 * buildingAlpha);
-            ctx.strokeRect(bx, top, bw, bh);
-          }
-        }
-
-        for (const win of b.windows) {
-          const wx = bx + win.u * bw;
-          const wy = top + win.v * bh;
-          nodes.push({ x: wx, y: wy, b: lights });
-          if (lights > 0 && signal < 0.85) {
-            const on = 0.35 + 0.65 * Math.abs(Math.sin(time * 0.7 + wx * 0.05));
-            glow(
-              ctx,
-              wx,
-              wy,
-              1.4,
-              [255, 220, 150],
-              0.55 * lights * on * (1 - signal * 0.7),
-            );
-          }
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const use =
+        quality === "preview" || reduceMotion
+          ? lights.filter((_, i) => i % 3 === 0)
+          : lights;
+      const pts: { x: number; y: number }[] = [];
+      for (const light of use) {
+        const b = buildings[light.bx];
+        if (!b) continue;
+        const bx = b.x * w;
+        const bw = b.w * w;
+        const bh = b.h * h * Math.max(skyline, 0.2);
+        const lx = bx + light.u * bw;
+        let ly = horizon - bh + light.v * bh;
+        ly -= lift * (80 + light.warm * 120);
+        const on = 0.45 + 0.55 * Math.abs(Math.sin(time * 0.55 + lx * 0.04));
+        const rgb = light.warm > 0.78 ? teal : light.warm > 0.35 ? gold : ice;
+        const lit = glowIn * on;
+        ctx.fillStyle = `rgba(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0},${0.55 * lit})`;
+        ctx.fillRect(lx - 1.6, ly - 2.4, 3.2, 4.8);
+        spark(ctx, lx, ly, light.s * lerp(10, 18, glowIn), rgb, 0.55 * lit);
+        pts.push({ x: lx, y: ly });
+        if (lift < 0.85) {
+          spark(
+            ctx,
+            lx,
+            horizon + (horizon - ly) * 0.28,
+            light.s * 7,
+            rgb,
+            0.18 * lit * (1 - lift),
+          );
         }
       }
 
-      ctx.strokeStyle = rgba([8, 10, 18], 1);
-      ctx.beginPath();
-      ctx.moveTo(0, horizon);
-      ctx.lineTo(w, horizon);
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      if (signal > 0.05) {
-        ctx.globalCompositeOperation = "lighter";
-        const use = quality === "preview" ? nodes.filter((_, i) => i % 3 === 0) : nodes;
-        const max = lerp(40, 130, signal);
+      if (net > 0.05) {
+        const cap = quality === "preview" ? 40 : 80;
+        const max = lerp(36, 110, net);
         ctx.lineWidth = 0.7;
-        const cap = quality === "preview" ? 40 : 90;
-        for (let i = 0; i < use.length; i++) {
-          const a = use[i];
-          glow(ctx, a.x, a.y, 1.6, [120, 220, 255], 0.45 * signal);
+        for (let i = 0; i < Math.min(pts.length, cap); i++) {
+          const a = pts[i];
           let linked = 0;
-          for (let j = i + 1; j < use.length && linked < 3; j++) {
-            const b = use[j];
+          for (let j = i + 1; j < pts.length && linked < 2; j++) {
+            const b = pts[j];
             const d = Math.hypot(a.x - b.x, a.y - b.y);
             if (d > max) continue;
-            ctx.strokeStyle = rgba([80, 200, 255], (1 - d / max) * 0.22 * signal);
+            ctx.strokeStyle = `rgba(140,220,255,${(1 - d / max) * 0.16 * net})`;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.stroke();
             linked++;
           }
-          if (i > cap) break;
         }
-
-        ctx.strokeStyle = rgba([140, 230, 255], 0.12 * signal);
-        ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.35, 40 + Math.sin(time) * 6, 0, TAU);
-        ctx.stroke();
       }
 
+      neonPath(
+        ctx,
+        () => {
+          ctx.moveTo(0, horizon);
+          ctx.lineTo(w, horizon);
+        },
+        mix3(gold, ice, teal, t),
+        1,
+        0.12 * skyline * (1 - lift * 0.5),
+      );
+
       ctx.restore();
-      grain(ctx, w, h, 0.12);
-      vignette(ctx, w, h, 0.58);
+      grain(ctx, w, h, 0.08);
+      vignette(ctx, w, h, 0.5);
     },
   };
 }
@@ -159,16 +152,8 @@ export const city: Work = {
   index: "06",
   title: "City as Signal",
   titleKo: "도시는 신호가 된다",
-  line: "밤의 창문이 점과 선, 데이터로 바뀐다.",
-  tone: "#7ad4ff",
-  durationVh: 740,
-  previewT: (time) => 0.35 + Math.sin(time * 0.2) * 0.28,
-  captions: [
-    { at: 0.08, kicker: "Night", line: "A city holding its breath.", lineKo: "숨을 참고 있는 밤의 도시." },
-    { at: 0.28, kicker: "Windows", line: "Windows become points of light.", lineKo: "창문이 점이 된다." },
-    { at: 0.52, kicker: "Wire", line: "Buildings forget they were stone.", lineKo: "건물이 선이 된다." },
-    { at: 0.76, kicker: "Signal", line: "The city is only a network now.", lineKo: "도시는 신호가 된다." },
-    { at: 0.93, kicker: "Grid", line: "City as Signal", lineKo: "도시는 신호가 된다." },
-  ],
+  tone: "#8ad7ff",
+  durationVh: 820,
+  previewT: (time) => 0.4 + Math.sin(time * 0.16) * 0.22,
   create,
 };

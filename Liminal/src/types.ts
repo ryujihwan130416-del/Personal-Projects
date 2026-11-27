@@ -1,14 +1,5 @@
-export type Caption = {
-  at: number;
-  kicker: string;
-  line: string;
-  lineKo: string;
-};
-
 export type Frame = {
-  /** Scroll progress 0–1. */
   t: number;
-  /** Elapsed seconds since the renderer was created. */
   time: number;
   dt: number;
   w: number;
@@ -22,7 +13,6 @@ export type Frame = {
 
 export type WorkRenderer = {
   draw: (ctx: CanvasRenderingContext2D, frame: Frame) => void;
-  resize?: (w: number, h: number) => void;
 };
 
 export type Work = {
@@ -30,10 +20,8 @@ export type Work = {
   index: string;
   title: string;
   titleKo: string;
-  line: string;
   tone: string;
   durationVh: number;
-  captions: Caption[];
   previewT: (time: number) => number;
   create: () => WorkRenderer;
 };

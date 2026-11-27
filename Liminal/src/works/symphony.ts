@@ -1,107 +1,91 @@
-import { glow, grain, trail, vignette } from "../draw";
-import { lerp, rgba, smoothstep, TAU } from "../math";
+import { grain, mix3, neonPath, orb, spark, trail, vignette } from "../draw";
+import { lerp, mulberry32, smoothstep, TAU } from "../math";
 import type { Work, WorkRenderer } from "../types";
 
+type Node = { a: number; r: number; s: number; kind: number };
+
 function create(): WorkRenderer {
-  const nodes = Array.from({ length: 36 }, (_, i) => ({
-    a: (i / 36) * TAU,
-    r: 0.35 + (i % 5) * 0.08,
-    p: i * 0.37,
+  const rng = mulberry32(0x51e4);
+  const nodes: Node[] = Array.from({ length: 240 }, () => ({
+    a: rng() * TAU,
+    r: 0.18 + rng() * 0.42,
+    s: 0.5 + rng() * 1.6,
+    kind: rng(),
   }));
 
   return {
     draw(ctx, frame) {
-      const { t, time, w, h, quality } = frame;
-      trail(ctx, 0.16, "6,4,14");
-      if (t < 0.02) {
-        ctx.fillStyle = "#070510";
-        ctx.fillRect(0, 0, w, h);
-      }
-
+      const { t, time, w, h, quality, reduceMotion } = frame;
+      trail(ctx, 0.1, "6,3,16");
       const cx = w * 0.5;
-      const cy = h * 0.48;
-      const beat = 0.5 + 0.5 * Math.sin(time * 2.2 + t * 8);
-      const m1 = smoothstep(0.0, 0.22, t);
-      const m2 = smoothstep(0.18, 0.48, t);
-      const m3 = smoothstep(0.42, 0.72, t);
-      const m4 = smoothstep(0.68, 0.95, t);
-      const merge = smoothstep(0.82, 1, t);
+      const cy = h * 0.5;
+      const m1 = smoothstep(0, 0.28, t);
+      const m2 = smoothstep(0.18, 0.55, t);
+      const m3 = smoothstep(0.45, 0.8, t);
+      const merge = smoothstep(0.78, 1, t);
+      const mag: [number, number, number] = [255, 110, 200];
+      const cyan: [number, number, number] = [120, 190, 255];
+      const gold: [number, number, number] = [255, 220, 150];
+      const col = mix3(mag, cyan, gold, t);
 
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
+      orb(ctx, cx, cy, Math.min(w, h) * 0.42, col, 0.1 + m3 * 0.08);
 
-      const dots = quality === "preview" ? 18 : nodes.length;
-      for (let i = 0; i < dots; i++) {
+      const waves = quality === "preview" ? 3 : 5;
+      for (let k = 0; k < waves; k++) {
+        const amp = (26 + k * 10) * lerp(0.3, 1, m2) * (1 - merge * 0.35);
+        const rgb = k % 3 === 0 ? mag : k % 3 === 1 ? cyan : gold;
+        neonPath(
+          ctx,
+          () => {
+            for (let x = 0; x <= w; x += 4) {
+              const y =
+                cy +
+                Math.sin(x * (0.01 + k * 0.002) + time * (1.6 + k * 0.35) + k) *
+                  amp +
+                Math.sin(x * 0.023 - time * 1.2 + k) * amp * 0.28;
+              if (x === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+          },
+          rgb,
+          1.1,
+          0.28 * m2 * (1 - k * 0.08),
+        );
+      }
+
+      const rings = quality === "preview" ? 4 : 7;
+      for (let i = 0; i < rings; i++) {
+        const u = (i / rings + time * 0.06) % 1;
+        const r = lerp(20, Math.min(w, h) * 0.4, u) * lerp(0.4, 1, m3);
+        neonPath(
+          ctx,
+          () => {
+            ctx.arc(cx, cy, r, 0, TAU);
+          },
+          i % 2 ? mag : cyan,
+          1,
+          (1 - u) * 0.22 * m3 * (1 - merge * 0.4),
+        );
+      }
+
+      const count = quality === "preview" ? 70 : nodes.length;
+      const spin = time * (reduceMotion ? 0.05 : 0.18);
+      for (let i = 0; i < count; i++) {
         const n = nodes[i];
-        const pulse = 0.55 + 0.45 * Math.sin(time * (1.4 + n.p * 0.2) + n.a * 3);
-        const rad = lerp(40, Math.min(w, h) * n.r, m1) * (1 - merge * 0.7);
-        const x = cx + Math.cos(n.a + time * 0.12) * rad;
-        const y = cy + Math.sin(n.a + time * 0.12) * rad * 0.78;
-        const rgb: [number, number, number] =
-          i % 3 === 0 ? [255, 120, 200] : i % 3 === 1 ? [120, 180, 255] : [255, 220, 140];
-        glow(ctx, x, y, 2 + pulse * 2.5, rgb, 0.45 * m1 * pulse);
+        const rad = n.r * Math.min(w, h) * lerp(0.35, 1, m1) * (1 - merge * 0.45);
+        const pulse = 0.6 + 0.4 * Math.sin(time * 2.2 + n.a * 4);
+        const x = cx + Math.cos(n.a + spin) * rad;
+        const y = cy + Math.sin(n.a + spin) * rad * 0.78;
+        const rgb = n.kind > 0.66 ? gold : n.kind > 0.33 ? cyan : mag;
+        spark(ctx, x, y, n.s * 8 * pulse, rgb, 0.28 * m1 * pulse);
       }
 
-      if (m2 > 0) {
-        ctx.strokeStyle = rgba([180, 160, 255], 0.28 * m2);
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        const amp = 28 * m2 * (1 + beat * 0.35) * (1 - merge * 0.5);
-        const freq = 0.018 + t * 0.01;
-        for (let x = 0; x <= w; x += 4) {
-          const y =
-            cy +
-            Math.sin(x * freq + time * 3.2) * amp +
-            Math.sin(x * freq * 2.3 - time * 2) * amp * 0.35;
-          if (x === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      }
-
-      if (m3 > 0) {
-        const rings = 6;
-        for (let i = 0; i < rings; i++) {
-          const u = (i / rings + time * 0.08) % 1;
-          const r = lerp(20, Math.min(w, h) * 0.42, u) * m3;
-          ctx.strokeStyle = rgba(
-            [255, 90 + i * 20, 180],
-            (1 - u) * 0.22 * m3 * (1 - merge),
-          );
-          ctx.lineWidth = 1.4;
-          ctx.beginPath();
-          ctx.arc(cx, cy, r, 0, TAU);
-          ctx.stroke();
-        }
-      }
-
-      if (m4 > 0) {
-        const waves = 3;
-        for (let k = 0; k < waves; k++) {
-          ctx.strokeStyle = rgba(
-            [255, 230, 210],
-            0.2 * m4 * (1 - k * 0.25),
-          );
-          ctx.lineWidth = 1.6 - k * 0.3;
-          ctx.beginPath();
-          for (let x = 0; x <= w; x += 3) {
-            const y =
-              cy +
-              Math.sin(x * 0.012 + time * (2 + k) + k) *
-                (50 - k * 12) *
-                m4 *
-                lerp(1, 0.25, merge);
-            if (x === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-        }
-        glow(ctx, cx, cy, lerp(8, 36, merge), [255, 240, 220], 0.22 * m4);
-      }
-
+      orb(ctx, cx, cy, lerp(12, 48, merge), gold, 0.22 * m3);
       ctx.restore();
-      grain(ctx, w, h, 0.1);
-      vignette(ctx, w, h, 0.55);
+      grain(ctx, w, h, 0.07);
+      vignette(ctx, w, h, 0.48);
     },
   };
 }
@@ -111,16 +95,8 @@ export const symphony: Work = {
   index: "05",
   title: "Silent Symphony",
   titleKo: "들리지 않는 음악",
-  line: "점과 선과 색이 박자를 대신한다.",
-  tone: "#d09cff",
-  durationVh: 720,
-  previewT: (time) => 0.55 + Math.sin(time * 0.4) * 0.2,
-  captions: [
-    { at: 0.08, kicker: "I", line: "The first beat is a point.", lineKo: "첫 박은 하나의 점이다." },
-    { at: 0.3, kicker: "II", line: "A line learns rhythm.", lineKo: "선이 리듬을 배운다." },
-    { at: 0.54, kicker: "III", line: "Color stands in for sound.", lineKo: "색이 소리를 대신한다." },
-    { at: 0.78, kicker: "IV", line: "Every note becomes one wave.", lineKo: "모든 음이 하나의 파동으로." },
-    { at: 0.94, kicker: "Coda", line: "Silent Symphony", lineKo: "들리지 않는 음악." },
-  ],
+  tone: "#e08cff",
+  durationVh: 800,
+  previewT: (time) => 0.58 + Math.sin(time * 0.3) * 0.16,
   create,
 };

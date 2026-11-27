@@ -1,7 +1,7 @@
 import { createSurface, prefersReducedMotion } from "./surface";
 import { galleryHref } from "./router";
 import { works } from "./works/index";
-import type { Frame, Work } from "./types";
+import type { Frame } from "./types";
 import { clamp } from "./math";
 
 export function mountExperience(root: HTMLElement, id: string): () => void {
@@ -21,29 +21,17 @@ export function mountExperience(root: HTMLElement, id: string): () => void {
   const chrome = document.createElement("header");
   chrome.className = "experience-chrome";
   chrome.innerHTML = `
-    <a class="back" href="${galleryHref()}">전시로</a>
+    <a class="back" href="${galleryHref()}" aria-label="gallery">←</a>
     <div class="experience-meta">
-      <span class="room-index">${work.index}</span>
       <span class="experience-title">${work.title}</span>
-      <span class="experience-ko">${work.titleKo}</span>
     </div>
     <div class="progress" aria-hidden="true"><i></i></div>
   `;
   root.appendChild(chrome);
 
-  const captions = document.createElement("div");
-  captions.className = "captions";
-  captions.setAttribute("aria-live", "polite");
-  captions.innerHTML = `
-    <p class="caption-kicker"></p>
-    <p class="caption-en"></p>
-    <p class="caption-ko"></p>
-  `;
-  root.appendChild(captions);
-
   const hint = document.createElement("div");
   hint.className = "scroll-hint";
-  hint.textContent = "스크롤하여 입장";
+  hint.textContent = "scroll";
   root.appendChild(hint);
 
   const space = document.createElement("div");
@@ -55,9 +43,6 @@ export function mountExperience(root: HTMLElement, id: string): () => void {
   const renderer = work.create();
   const reduce = prefersReducedMotion();
   const bar = chrome.querySelector("i");
-  const kicker = captions.querySelector(".caption-kicker");
-  const en = captions.querySelector(".caption-en");
-  const ko = captions.querySelector(".caption-ko");
 
   let raf = 0;
   let last = performance.now();
@@ -70,26 +55,17 @@ export function mountExperience(root: HTMLElement, id: string): () => void {
     return clamp(scrollY / max, 0, 1);
   };
 
-  const setCaption = (t: number) => {
-    const cap = activeCaption(work, t);
-    if (!cap || !kicker || !en || !ko) return;
-    captions.style.opacity = t < 0.02 ? "0" : "1";
-    kicker.textContent = cap.kicker;
-    en.textContent = cap.line;
-    ko.textContent = cap.lineKo;
-  };
-
   const tick = (now: number) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     elapsed += dt;
     const t = progressOf();
     if (bar instanceof HTMLElement) bar.style.transform = `scaleX(${t})`;
-    if (!hintHidden && t > 0.02) {
+    if (!hintHidden && t > 0.015) {
       hint.classList.add("is-gone");
+      chrome.classList.add("is-quiet");
       hintHidden = true;
     }
-    setCaption(t);
     const frame: Frame = {
       t,
       time: elapsed,
@@ -136,16 +112,4 @@ export function mountExperience(root: HTMLElement, id: string): () => void {
     root.innerHTML = "";
     root.className = "page";
   };
-}
-
-function activeCaption(work: Work, t: number) {
-  const caps = work.captions;
-  if (caps.length === 0) return undefined;
-  let i = 0;
-  while (i < caps.length - 1) {
-    const mid = (caps[i].at + caps[i + 1].at) / 2;
-    if (t < mid) break;
-    i += 1;
-  }
-  return caps[i];
 }

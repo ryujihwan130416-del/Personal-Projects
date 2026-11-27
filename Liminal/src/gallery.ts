@@ -1,6 +1,7 @@
 import { createSurface, prefersReducedMotion } from "./surface";
-import { galleryHref, workHref } from "./router";
+import { workHref } from "./router";
 import { works } from "./works/index";
+import { orb, spark } from "./draw";
 import type { Frame } from "./types";
 
 export function mountGallery(root: HTMLElement): () => void {
@@ -12,11 +13,8 @@ export function mountGallery(root: HTMLElement): () => void {
   hero.innerHTML = `
     <canvas class="hero-canvas"></canvas>
     <div class="hero-copy">
-      <p class="kicker">Exhibition</p>
       <h1>LIMINAL</h1>
-      <p class="hero-sub">스크롤로 들어가는 여섯 개의 방</p>
-      <p class="hero-line">Six rooms of digital art. Scroll is the only instrument.</p>
-      <button class="hero-scroll" type="button">아래로 내려 전시를 시작하세요</button>
+      <button class="hero-scroll" type="button">enter</button>
     </div>
   `;
   root.appendChild(hero);
@@ -28,16 +26,10 @@ export function mountGallery(root: HTMLElement): () => void {
   heroScroll?.addEventListener("click", () => {
     rooms.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" });
   });
-  rooms.innerHTML = `<p class="rooms-label">Rooms</p>`;
   const grid = document.createElement("div");
   grid.className = "room-grid";
   rooms.appendChild(grid);
   root.appendChild(rooms);
-
-  const footer = document.createElement("footer");
-  footer.className = "site-footer";
-  footer.innerHTML = `<p>스크롤은 시간이다. <a href="${galleryHref()}">Liminal</a></p>`;
-  root.appendChild(footer);
 
   const cleanups: Array<() => void> = [];
 
@@ -56,9 +48,6 @@ export function mountGallery(root: HTMLElement): () => void {
       <div class="room-meta">
         <span class="room-index">${work.index}</span>
         <h2>${work.title}</h2>
-        <p class="room-ko">${work.titleKo}</p>
-        <p class="room-line">${work.line}</p>
-        <span class="room-enter">입장</span>
       </div>
     `;
     grid.appendChild(card);
@@ -80,10 +69,11 @@ function runHero(parent: HTMLElement, canvas: HTMLCanvasElement): () => void {
   const reduce = prefersReducedMotion();
   let raf = 0;
   let start = performance.now();
-  const dots = Array.from({ length: 80 }, (_, i) => ({
-    a: (i / 80) * Math.PI * 2,
-    r: 40 + (i % 17) * 12,
-    s: 0.6 + (i % 5) * 0.3,
+  const dots = Array.from({ length: 420 }, (_, i) => ({
+    a: (i / 420) * Math.PI * 2,
+    r: 18 + (i % 41) * 11,
+    s: 0.6 + (i % 9) * 0.45,
+    k: i % 3,
   }));
 
   const resize = () => {
@@ -100,23 +90,26 @@ function runHero(parent: HTMLElement, canvas: HTMLCanvasElement): () => void {
   const ro = new ResizeObserver(resize);
   ro.observe(parent);
 
+  const gold: [number, number, number] = [255, 220, 180];
+  const ice: [number, number, number] = [180, 210, 255];
+
   const tick = (now: number) => {
     const w = parent.clientWidth;
     const h = parent.clientHeight;
     const time = (now - start) / 1000;
-    ctx.fillStyle = "#050507";
+    ctx.fillStyle = "#030308";
     ctx.fillRect(0, 0, w, h);
     ctx.globalCompositeOperation = "lighter";
     const cx = w * 0.5;
     const cy = h * 0.46;
+    orb(ctx, cx, cy, Math.min(w, h) * 0.48, gold, 0.2);
+    orb(ctx, cx * 1.06, cy * 1.04, Math.min(w, h) * 0.28, ice, 0.12);
+    const speed = reduce ? 0.03 : 0.12;
     for (const d of dots) {
-      const spin = d.a + time * (reduce ? 0.02 : 0.08);
-      const x = cx + Math.cos(spin) * d.r * (w / 900);
-      const y = cy + Math.sin(spin) * d.r * 0.55 * (h / 700);
-      ctx.beginPath();
-      ctx.fillStyle = "rgba(232,220,200,0.18)";
-      ctx.arc(x, y, d.s, 0, Math.PI * 2);
-      ctx.fill();
+      const spin = d.a + time * speed * (0.4 + (d.k + 1) * 0.2);
+      const x = cx + Math.cos(spin) * d.r * (w / 860);
+      const y = cy + Math.sin(spin) * d.r * 0.5 * (h / 680);
+      spark(ctx, x, y, 10 + d.s * 7, d.k === 1 ? ice : gold, 0.42);
     }
     ctx.globalCompositeOperation = "source-over";
     raf = requestAnimationFrame(tick);
@@ -178,7 +171,7 @@ function runPreview(stage: HTMLElement, id: string): () => void {
         cancelAnimationFrame(raf);
       }
     },
-    { threshold: 0.15 },
+    { threshold: 0.12 },
   );
   io.observe(stage);
 
@@ -193,14 +186,10 @@ function runPreview(stage: HTMLElement, id: string): () => void {
     pointer.on = false;
   });
 
-  const onResize = () => surface.resize();
-  window.addEventListener("resize", onResize);
-
   return () => {
     running = false;
     cancelAnimationFrame(raf);
     io.disconnect();
-    window.removeEventListener("resize", onResize);
     stage.removeEventListener("pointermove", onMove);
     surface.destroy();
   };

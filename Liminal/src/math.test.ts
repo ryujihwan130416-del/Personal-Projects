@@ -23,7 +23,9 @@ describe("catalog", () => {
     expect(works).toHaveLength(6);
     const ids = works.map((w) => w.id);
     expect(new Set(ids).size).toBe(6);
-    expect(works.every((w) => w.captions.length >= 4)).toBe(true);
+    expect(works.every((w) => w.title.length > 0 && typeof w.create === "function")).toBe(
+      true,
+    );
     expect(findWork("weather")?.titleKo).toContain("날씨");
   });
 });

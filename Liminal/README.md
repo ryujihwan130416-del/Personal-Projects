@@ -1,6 +1,6 @@
 # Liminal
 
-A small exhibition of six scroll-driven digital artworks. The homepage is a gallery; each room is a long scroll where the canvas is the piece.
+A gallery of six scroll-driven visual pieces. Almost no copy — the canvas is the work.
 
 1. **Origin of Light** — 빛은 천천히 태어난다
 2. **Weather Inside Me** — 내 안의 날씨
