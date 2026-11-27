@@ -26,6 +26,7 @@ export type Filters = {
   relevanceLanguage: string
   videoEmbeddable: boolean
   channelId: string
+  keywordOnly: boolean
   maxResults: number
 }
 
@@ -53,11 +54,18 @@ export type VideoResult = {
   embeddable: boolean
 }
 
+export type ChannelHit = {
+  title: string
+  handle: string
+  url: string
+}
+
 export type SearchPage = {
   totalResults: number
   nextPageToken?: string
   prevPageToken?: string
   results: VideoResult[]
+  channel?: ChannelHit
 }
 
 export type Chip = {

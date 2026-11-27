@@ -30,6 +30,7 @@ export const DEFAULT_FILTERS: Filters = {
   relevanceLanguage: '',
   videoEmbeddable: false,
   channelId: '',
+  keywordOnly: false,
   maxResults: 12,
 }
 
@@ -100,6 +101,15 @@ export function eventTypeLocks(filters: Filters): boolean {
 
 export function hasSearchTarget(filters: Filters): boolean {
   return filters.q.trim().length > 0 || filters.channelId.trim().length > 0 || filters.eventType !== 'any'
+}
+
+export type SearchRoute = 'live' | 'sample' | 'needs-key'
+
+/** Live YouTube is the default. The sample catalog runs only when the user opts in. */
+export function searchRoute(apiKey: string, preferSample: boolean): SearchRoute {
+  if (preferSample) return 'sample'
+  if (apiKey.trim()) return 'live'
+  return 'needs-key'
 }
 
 export function isChannelId(value: string): boolean {

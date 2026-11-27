@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activeChips, buildSearchParams, DEFAULT_FILTERS, publishedAfter } from './query'
+import { activeChips, buildSearchParams, DEFAULT_FILTERS, publishedAfter, searchRoute } from './query'
 
 const now = new Date('2026-10-08T12:00:00.000Z')
 
@@ -98,5 +98,22 @@ describe('YouTube search parameters', () => {
     expect(ids).toContain('event')
     expect(ids).toContain('region')
     expect(ids).not.toContain('duration')
+  })
+})
+
+describe('search route', () => {
+  it('uses live YouTube when a key exists and never substitutes the sample catalog', () => {
+    expect(searchRoute('AIza-live', false)).toBe('live')
+    expect(searchRoute('  AIza-live  ', false)).toBe('live')
+  })
+
+  it('asks for a key instead of searching the sample catalog', () => {
+    expect(searchRoute('', false)).toBe('needs-key')
+    expect(searchRoute('   ', false)).toBe('needs-key')
+  })
+
+  it('uses the sample catalog only when that mode is explicit', () => {
+    expect(searchRoute('', true)).toBe('sample')
+    expect(searchRoute('AIza-live', true)).toBe('sample')
   })
 })
