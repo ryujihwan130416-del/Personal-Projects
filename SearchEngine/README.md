@@ -1,8 +1,8 @@
 # 서랍
 
-미니 검색 엔진입니다. 샘플 문서와 직접 넣은 글을 BM25로 검색합니다.
+미니 검색 엔진 웹 앱입니다. 샘플 문서와 직접 넣은 글을 브라우저에서 BM25로 검색합니다.
 
-## 웹 앱으로 열기 (Publish / Vite)
+## 실행
 
 ```bash
 cd SearchEngine
@@ -18,21 +18,10 @@ npm run preview
 npm run dev
 ```
 
-## 로컬 Python 서버 (URL 크롤 포함)
+## 기능
 
-```bash
-cd SearchEngine
-python3 -m pip install -r requirements.txt
-python3 server.py
-```
+- 샘플 문서 검색
+- 제목·본문 직접 추가 (브라우저 localStorage)
+- 샘플로 초기화
 
-브라우저에서 [http://127.0.0.1:8765](http://127.0.0.1:8765) 를 엽니다. 아래에 URL을 넣으면 페이지를 모아 색인에 더합니다.
-
-## 동작
-
-| 모드 | 내용 |
-| --- | --- |
-| Vite / Publish | 샘플 + 브라우저에 넣은 글 검색 (크롤 없음) |
-| Python 로컬 | URL 크롤 · robots.txt · 역색인 · BM25 |
-
-호스팅 앱에서는 임의 URL 요청(크롤)을 쓰지 않습니다.
+URL을 따라가며 모으는 로컬 크롤 서버는 `SearchEngineServer/` 에 있습니다.
