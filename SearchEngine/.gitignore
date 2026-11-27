@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+node_modules/
+dist/
 data/*.json
 data/*.db
 !data/.gitkeep

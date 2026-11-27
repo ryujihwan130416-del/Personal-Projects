@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>서랍 — 검색</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <header class="top">
+    <a class="brand" href="/" aria-label="서랍 홈">서랍</a>
+    <p class="top-note">브라우저에서 바로 · 샘플 + 내가 넣은 글</p>
+  </header>
+
+  <main>
+    <section class="hero" id="hero">
+      <p class="brand-mark">서랍</p>
+      <h1 class="headline">나만의 글을<br />꺼내 보세요</h1>
+      <p class="lede">샘플 문서와 직접 넣은 글을 브라우저에서 바로 검색합니다.</p>
+
+      <form class="search-form" id="search-form" role="search">
+        <label class="sr-only" for="q">검색어</label>
+        <input
+          id="q"
+          name="q"
+          type="search"
+          autocomplete="off"
+          placeholder="예: 녹차, BM25, 남산공원"
+          required
+        />
+        <button type="submit">검색</button>
+      </form>
+
+      <p class="meta" id="stats">색인 준비 중…</p>
+    </section>
+
+    <section class="results-section" id="results-section" hidden>
+      <h2 class="section-title"><span id="result-label">결과</span></h2>
+      <ol class="results" id="results"></ol>
+      <p class="empty" id="empty" hidden>맞는 문서가 없습니다. 다른 단어로 시도해 보세요.</p>
+    </section>
+
+    <section class="crawl-section" id="add-section">
+      <h2 class="section-title">글 넣기</h2>
+      <p class="section-copy">제목과 본문을 넣으면 이 브라우저 색인에 바로 더합니다. (호스팅에서는 URL 크롤 대신 이 방식을 씁니다.)</p>
+      <form class="crawl-form" id="add-form">
+        <label class="sr-only" for="doc-title">제목</label>
+        <input id="doc-title" type="text" placeholder="제목" required />
+        <label class="sr-only" for="doc-body">본문</label>
+        <textarea id="doc-body" rows="5" placeholder="본문" required></textarea>
+        <div class="crawl-controls">
+          <button type="submit" id="add-btn">색인에 추가</button>
+        </div>
+      </form>
+      <p class="crawl-status" id="add-status" aria-live="polite"></p>
+      <button type="button" class="reset-btn" id="reset-btn">샘플 문서로 초기화</button>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>서랍은 미니 검색 엔진입니다. 샘플 문서로 바로 검색할 수 있고, 글을 더 넣을 수 있습니다.</p>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
