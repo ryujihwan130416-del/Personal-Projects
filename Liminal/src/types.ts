@@ -1,29 +1,13 @@
-export type Frame = {
-  t: number;
-  time: number;
-  dt: number;
-  w: number;
-  h: number;
-  pointerX: number;
-  pointerY: number;
-  pointer: boolean;
-  quality: "full" | "preview";
-  reduceMotion: boolean;
-};
+export type Ken = "in" | "out" | "left" | "right";
 
-export type WorkRenderer = {
-  draw: (ctx: CanvasRenderingContext2D, frame: Frame) => void;
-};
-
-export type Work = {
+export type Chapter = {
   id: string;
   index: string;
   title: string;
   titleKo: string;
-  tone: string;
-  durationVh: number;
-  previewT: (time: number) => number;
-  create: () => WorkRenderer;
+  still: string;
+  ken: Ken;
+  theme: "light" | "dark";
 };
 
-export type Route = { name: "gallery" } | { name: "work"; id: string };
+export type Route = { name: "home" } | { name: "chapter"; id: string };

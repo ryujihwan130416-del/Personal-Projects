@@ -1,13 +1,13 @@
 # Liminal
 
-A gallery of six scroll-driven visual pieces. Almost no copy — the canvas is the work.
+A cinematic one-page studio: black gate, white hangar, then six pinned stills that change as you scroll.
 
-1. **Origin of Light** — 빛은 천천히 태어난다
+1. **Origin of Light** — 빛의 기원
 2. **Weather Inside Me** — 내 안의 날씨
-3. **Digital Bloom** — 스크롤로 피어나는 정원
+3. **Digital Bloom** — 디지털 블룸
 4. **Room of Forgotten Things** — 잊힌 것들의 방
-5. **Silent Symphony** — 들리지 않는 음악
-6. **City as Signal** — 도시는 신호가 된다
+5. **Silent Symphony** — 사일런트 심포니
+6. **City as Signal** — 시티 시그널
 
 ## Run
 
@@ -17,6 +17,6 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints (http://localhost:5174). Click a room, then scroll. `Esc` returns to the gallery. Keys `1`–`6` jump to a room.
+Open the URL Vite prints (http://localhost:5174). Click **Enter**, then scroll. The bottom dock jumps between the hangar and the rooms. `1`–`6` jump to a room. Deep links: `#/origin`, `#/weather`, …
 
-`npm test` checks the catalog and routing. `npm run build` typechecks and writes `dist/`.
+`npm test` checks the catalog, routing, and pin-scroll math. `npm run build` typechecks and writes `dist/`.

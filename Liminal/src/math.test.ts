@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { chapters, findChapter } from "./chapters";
 import { clamp, inverseLerp, lerp, ridge, smoothstep } from "./math";
+import { crossfade, kenTransform, nearestBeat, sectionProgress } from "./progress";
 import { parseHash } from "./router";
-import { findWork, works } from "./works/index";
 
 describe("math", () => {
   it("clamps and lerps", () => {
@@ -20,21 +21,43 @@ describe("math", () => {
 
 describe("catalog", () => {
   it("has six unique rooms", () => {
-    expect(works).toHaveLength(6);
-    const ids = works.map((w) => w.id);
+    expect(chapters).toHaveLength(6);
+    const ids = chapters.map((c) => c.id);
     expect(new Set(ids).size).toBe(6);
-    expect(works.every((w) => w.title.length > 0 && typeof w.create === "function")).toBe(
+    expect(chapters.every((c) => c.title.length > 0 && c.still.startsWith("/stills/"))).toBe(
       true,
     );
-    expect(findWork("weather")?.titleKo).toContain("날씨");
+    expect(findChapter("weather")?.titleKo).toContain("날씨");
   });
 });
 
 describe("router", () => {
-  it("parses gallery and work hashes", () => {
-    expect(parseHash("")).toEqual({ name: "gallery" });
-    expect(parseHash("#/")).toEqual({ name: "gallery" });
-    expect(parseHash("#/origin")).toEqual({ name: "work", id: "origin" });
-    expect(parseHash("#/missing")).toEqual({ name: "gallery" });
+  it("parses home and chapter hashes", () => {
+    expect(parseHash("")).toEqual({ name: "home" });
+    expect(parseHash("#/")).toEqual({ name: "home" });
+    expect(parseHash("#/origin")).toEqual({ name: "chapter", id: "origin" });
+    expect(parseHash("#/missing")).toEqual({ name: "home" });
+  });
+});
+
+describe("progress", () => {
+  it("maps a sticky section onto 0..1", () => {
+    expect(sectionProgress(0, 1000, 200)).toBe(0);
+    expect(sectionProgress(-400, 1000, 200)).toBe(0.5);
+    expect(sectionProgress(-800, 1000, 200)).toBe(1);
+    expect(sectionProgress(40, 1000, 200)).toBe(0);
+  });
+
+  it("crossfades neighboring stills", () => {
+    expect(crossfade(0, 0, 6)).toBe(1);
+    expect(crossfade(0, 1, 6)).toBe(0);
+    expect(crossfade(0.2, 1, 6)).toBeCloseTo(1);
+    expect(nearestBeat(0, 6)).toBe(0);
+    expect(nearestBeat(1, 6)).toBe(5);
+  });
+
+  it("holds ken burns still when motion is reduced", () => {
+    expect(kenTransform(0.4, "in", true).scale).toBeCloseTo(1.06);
+    expect(kenTransform(1, "in", false).scale).toBeLessThan(kenTransform(0, "in", false).scale);
   });
 });
