@@ -2,13 +2,11 @@ import { chapters, editorialStill, hangarStill, reelStill } from "./chapters";
 import { clamp, lerp } from "./math";
 import { crossfade, kenTransform, nearestBeat, sectionProgress } from "./progress";
 import { chapterHref } from "./router";
+import { consumeLeave } from "./session";
 
-export type PageApi = {
-  openChapter: (id: string) => void;
-};
-
-export function mountPage(root: HTMLElement): PageApi {
+export function mountPage(root: HTMLElement): () => void {
   root.innerHTML = markup();
+  const resume = consumeLeave();
   document.body.classList.add("is-gated");
 
   const gate = must(root, ".gate");
@@ -59,6 +57,9 @@ export function mountPage(root: HTMLElement): PageApi {
     menuPreview.forEach((node, i) => node.classList.toggle("is-on", i === beat));
     const items = root.querySelectorAll(".menu-list a");
     items.forEach((item, i) => item.classList.toggle("is-on", i === beat));
+    root.querySelectorAll<HTMLElement>(".tour-hit, .tour-enter").forEach((node) => {
+      node.dataset.id = chapter.id;
+    });
   };
 
   const paint = () => {
@@ -115,6 +116,11 @@ export function mountPage(root: HTMLElement): PageApi {
     if (act === "enter") unlock();
     if (act === "menu") setMenu(!menuOpen);
     if (act === "close") setMenu(false);
+    if (act === "enter-room") {
+      const id = hit.dataset.id ?? chapters[beat].id;
+      location.hash = chapterHref(id);
+      return;
+    }
     if (act === "to") {
       const id = hit.dataset.id ?? "";
       if (id === "hangar" || id === "reel" || id === "edit") {
@@ -125,10 +131,7 @@ export function mountPage(root: HTMLElement): PageApi {
         });
         return;
       }
-      if (id) {
-        history.replaceState(null, "", chapterHref(id));
-        openChapter(id);
-      }
+      if (id) openChapter(id);
     }
   };
 
@@ -147,9 +150,7 @@ export function mountPage(root: HTMLElement): PageApi {
     }
     const n = Number(event.key);
     if (n >= 1 && n <= chapters.length) {
-      const id = chapters[n - 1].id;
-      history.replaceState(null, "", chapterHref(id));
-      openChapter(id);
+      location.hash = chapterHref(chapters[n - 1].id);
     }
   };
 
@@ -170,16 +171,22 @@ export function mountPage(root: HTMLElement): PageApi {
   raf = requestAnimationFrame(paint);
   preload();
 
-  if (reduce.matches) unlock();
+  if (reduce.matches || resume.skipGate) unlock();
+  if (resume.landOn) {
+    requestAnimationFrame(() => openChapter(resume.landOn as string));
+  }
 
-  window.addEventListener("pagehide", () => {
+  const destroy = () => {
     destroyed = true;
     cancelAnimationFrame(raf);
     root.removeEventListener("click", onClick);
     window.removeEventListener("keydown", onKey);
-  });
+    document.body.classList.remove("is-gated", "is-menu");
+  };
 
-  return { openChapter };
+  window.addEventListener("pagehide", destroy);
+
+  return destroy;
 }
 
 function markup(): string {
@@ -199,7 +206,7 @@ function markup(): string {
   const menuItems = chapters
     .map(
       (c, i) => `
-        <a href="${chapterHref(c.id)}" data-act="to" data-id="${c.id}" class="${i === 0 ? "is-on" : ""}">
+        <a href="${chapterHref(c.id)}" data-act="enter-room" data-id="${c.id}" class="${i === 0 ? "is-on" : ""}">
           <span>${c.index}</span>
           <b>${c.title}</b>
           <i>${c.titleKo}</i>
@@ -221,7 +228,7 @@ function markup(): string {
       <button class="gate" data-act="enter" type="button">
         <span class="gate-kicker">Liminal Studio</span>
         <span class="gate-enter">Enter</span>
-        <span class="gate-hint">스크롤로 여섯 개의 방을 지나간다</span>
+        <span class="gate-hint">스크롤하다가, 방에 들어간다</span>
       </button>
 
       <nav class="dock" aria-label="Liminal">
@@ -257,10 +264,12 @@ function markup(): string {
       <section class="tour" id="tour">
         <div class="tour-pin">
           <div class="tour-stage">${stillMarkup}</div>
+          <button class="tour-hit" type="button" data-act="enter-room" data-id="origin" aria-label="들어가기"></button>
           <div class="tour-copy">
             <p class="tour-index">01</p>
             <h2 class="tour-title">Origin of Light</h2>
             <p class="tour-ko">빛의 기원</p>
+            <button class="tour-enter" type="button" data-act="enter-room" data-id="origin">들어가기</button>
           </div>
           <ol class="tour-ticks">${ticks}</ol>
         </div>
